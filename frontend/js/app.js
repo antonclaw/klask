@@ -162,11 +162,12 @@ async function loadState() {
     });
 
     const handledRes = await handleAuthResponse(res);
-    if (!handledRes) return;
+    if (!handledRes) {
+        throw new Error('Authentication failed');
+    }
 
     if (!handledRes.ok) {
-        console.error('Failed to load state');
-        return;
+        throw new Error('Failed to load state');
     }
 
     const data = await handledRes.json();
@@ -578,10 +579,17 @@ async function initializeApp() {
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
         // Load state and show main app
-        await loadState();
-        handler = () => {
-            showMainApp();
-        };
+        try {
+            await loadState();
+            handler = () => {
+                showMainApp();
+            };
+        } catch (error) {
+            console.error('Failed to load state:', error);
+            handler = () => {
+                showLoginScreen();
+            };
+        }
     } else {
         handler = () => {
             showLoginScreen();
