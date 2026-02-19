@@ -251,7 +251,8 @@ function loadStateFromData(data) {
     championship.challengerId = data.championship.challengerId;
     championship.winsInRow = data.championship.winsInRow;
     championship.lastWinDate = data.championship.lastWinDate;
-    championship.lostToChampionToday = new Set(data.championship.lostToChampionToday || []);
+    const lostToday = data.championship.lostToChampionToday;
+    championship.lostToChampionToday = new Set(Array.isArray(lostToday) ? lostToday : Object.keys(lostToday || {}));
 
     games.length = 0;
     if (data.games) {
