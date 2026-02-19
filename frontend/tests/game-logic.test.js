@@ -596,7 +596,9 @@ function testLoadStateFromData() {
 
 function testGetStateForSave() {
     addPlayerToState('Alice');
+    addPlayerToState('Bob');
     championship.championId = players[0].id;
+    championship.lostToChampionToday.add(players[1].id);
     games.push({ player1Id: 1, player2Id: 2, score1: 6, score2: 4 });
 
     const state = getStateForSave();
@@ -605,7 +607,10 @@ function testGetStateForSave() {
     assert(state.championship !== undefined, 'State should have championship');
     assert(state.games !== undefined, 'State should have games');
     assert(state.championshipHistory !== undefined, 'State should have championshipHistory');
-    assertEquals(state.players.length, 1, 'Should have 1 player in saved state');
+    assertEquals(state.players.length, 2, 'Should have 2 players in saved state');
+    assert(Array.isArray(state.championship.lostToChampionToday), 'lostToChampionToday should be serialized as array');
+    assertEquals(state.championship.lostToChampionToday.length, 1, 'lostToChampionToday should have 1 entry');
+    assertEquals(state.championship.lostToChampionToday[0], players[1].id, 'lostToChampionToday should contain Bob\'s id');
 }
 
 function testCalculateHeadToHeadBasic() {

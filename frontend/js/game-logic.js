@@ -268,7 +268,10 @@ function loadStateFromData(data) {
 function getStateForSave() {
     return {
         players,
-        championship,
+        championship: {
+            ...championship,
+            lostToChampionToday: Array.from(championship.lostToChampionToday)
+        },
         games,
         championshipHistory
     };
