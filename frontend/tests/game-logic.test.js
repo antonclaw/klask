@@ -9,6 +9,7 @@ function resetState() {
     championship.challengerId = null;
     championship.winsInRow = 0;
     championship.lastWinDate = null;
+    championship.lostToChampionToday.clear();
     games.length = 0;
     championshipHistory.length = 0;
 }
@@ -51,7 +52,11 @@ function runTests() {
         testCalculateHeadToHeadBasic,
         testCalculateHeadToHeadMultipleOpponents,
         testCalculateHeadToHeadNoGames,
-        testCalculateHeadToHeadSortedByGamesCount
+        testCalculateHeadToHeadSortedByGamesCount,
+        testCannotBecomeChampionAfterLosingToday,
+        testCanBecomeChampionIfNoLossToday,
+        testLostTodaySetClearsOnNewDay,
+        testChampionBeatsMultiplePlayersTracked
     ];
 
     let passed = 0;
@@ -699,6 +704,121 @@ function testCalculateHeadToHeadSortedByGamesCount() {
     assertEquals(aliceH2H[1].gamesAgainst, 5, 'Bob should have 5 games');
     assertEquals(aliceH2H[2].name, 'Charlie', 'Third should be Charlie (3 games)');
     assertEquals(aliceH2H[2].gamesAgainst, 3, 'Charlie should have 3 games');
+}
+
+// Test: Player who lost to champion today cannot become champion (user scenario)
+function testCannotBecomeChampionAfterLosingToday() {
+    addPlayerToState('A');
+    addPlayerToState('B');
+    addPlayerToState('C');
+    const aId = players[0].id;
+    const bId = players[1].id;
+    const cId = players[2].id;
+
+    // A becomes champion
+    processMatchResult(aId, bId, 6, 4);
+    assertEquals(championship.championId, aId, 'A should be champion');
+
+    // B loses to A
+    processMatchResult(aId, bId, 6, 3);
+    assert(championship.lostToChampionToday.has(bId), 'B should be in lostToChampionToday set');
+
+    // C loses to A
+    processMatchResult(aId, cId, 6, 2);
+    assert(championship.lostToChampionToday.has(cId), 'C should be in lostToChampionToday set');
+
+    // B wins A 2 times
+    processMatchResult(bId, aId, 6, 4);
+    assertEquals(championship.championId, aId, 'A should still be champion after B\'s first win');
+    assertEquals(championship.winsInRow, 1, 'B should have 1 win in a row');
+
+    const result = processMatchResult(bId, aId, 6, 5);
+
+    // B should NOT become champion because B lost to A earlier today
+    assertEquals(championship.championId, aId, 'A should still be champion - B lost earlier today');
+    assertEquals(result.championChanged, false, 'Championship should not have changed');
+    assertEquals(championship.winsInRow, 2, 'B should have 2 wins in a row but cannot take championship');
+}
+
+// Test: Player who never lost to champion today can become champion
+function testCanBecomeChampionIfNoLossToday() {
+    addPlayerToState('A');
+    addPlayerToState('B');
+    addPlayerToState('C');
+    const aId = players[0].id;
+    const bId = players[1].id;
+    const cId = players[2].id;
+
+    // A becomes champion
+    processMatchResult(aId, bId, 6, 4);
+
+    // B loses to A
+    processMatchResult(aId, bId, 6, 3);
+    assert(championship.lostToChampionToday.has(bId), 'B should be in lostToChampionToday set');
+
+    // C never lost to A, wins twice
+    processMatchResult(cId, aId, 6, 4);
+    processMatchResult(cId, aId, 6, 5);
+
+    // C SHOULD become champion
+    assertEquals(championship.championId, cId, 'C should be champion - never lost to A today');
+}
+
+// Test: lostToChampionToday set clears on new day
+function testLostTodaySetClearsOnNewDay() {
+    addPlayerToState('A');
+    addPlayerToState('B');
+    const aId = players[0].id;
+    const bId = players[1].id;
+
+    // A becomes champion
+    processMatchResult(aId, bId, 6, 4);
+
+    // B loses to A today
+    processMatchResult(aId, bId, 6, 3);
+    assert(championship.lostToChampionToday.has(bId), 'B should be in lostToChampionToday set');
+
+    // Simulate new day
+    championship.lastWinDate = 'Mon Jan 01 2024';
+
+    // B wins once on new day - should clear the set
+    processMatchResult(bId, aId, 6, 4);
+    assertEquals(championship.lostToChampionToday.size, 0, 'lostToChampionToday should be cleared on new day');
+
+    // B wins again - should become champion now
+    processMatchResult(bId, aId, 6, 5);
+    assertEquals(championship.championId, bId, 'B should become champion on new day');
+}
+
+// Test: Champion beating multiple players tracks them all
+function testChampionBeatsMultiplePlayersTracked() {
+    addPlayerToState('A');
+    addPlayerToState('B');
+    addPlayerToState('C');
+    addPlayerToState('D');
+    const aId = players[0].id;
+    const bId = players[1].id;
+    const cId = players[2].id;
+    const dId = players[3].id;
+
+    // A becomes champion
+    processMatchResult(aId, bId, 6, 4);
+
+    // A beats B, C, D
+    processMatchResult(aId, bId, 6, 3);
+    processMatchResult(aId, cId, 6, 2);
+    processMatchResult(aId, dId, 6, 0);
+
+    // All should be tracked
+    assert(championship.lostToChampionToday.has(bId), 'B should be tracked');
+    assert(championship.lostToChampionToday.has(cId), 'C should be tracked');
+    assert(championship.lostToChampionToday.has(dId), 'D should be tracked');
+    assertEquals(championship.lostToChampionToday.size, 3, 'Should track 3 players');
+
+    // None of them should be able to become champion today
+    processMatchResult(bId, aId, 6, 4);
+    processMatchResult(bId, aId, 6, 5);
+    assertEquals(championship.championId, aId, 'A should still be champion');
 }
 
 // Export for Node.js, or auto-load message for browser
