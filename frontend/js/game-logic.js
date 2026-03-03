@@ -6,7 +6,8 @@ const players = [];
 const championship = {
     championId: null,
     challengerId: null,
-    winsInRow: 0,
+    // Old winsInRow logic replaced by candidate-based flow
+    candidate: null, // { playerId, remainingGames, firstWinDate }
     lastWinDate: null,
     lostToChampionToday: new Set() // Track players who lost to champion today
 };
