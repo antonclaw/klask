@@ -6,7 +6,9 @@ const players = [];
 const championship = {
     championId: null,
     challengerId: null,
-    // Old winsInRow logic replaced by candidate-based flow
+    // Maintain winsInRow for compatibility with existing tests/api
+    winsInRow: 0,
+    // New candidate-based flow
     candidate: null, // { playerId, remainingGames, firstWinDate }
     lastWinDate: null,
     lostToChampionToday: new Set() // Track players who lost to champion today
@@ -105,40 +107,76 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
     // Championship logic
     let championChanged = false;
 
+    // Handle candidate window play tracking: if candidate exists and played in this game,
+    // we'll decrement remainingGames if they didn't convert to champion here.
+
     if (!championship.championId) {
         championship.championId = winnerId;
     } else if (championship.championId === loserId) {
         // Champion lost
-        const isSameDay = championship.lastWinDate === today;
+        // New rule: to become champion, a player must (1) win their first game of the day
+        // against the champion, then (2) within their next two games become champion by winning at least one.
 
-        if (championship.challengerId === winnerId && isSameDay) {
-            championship.winsInRow++;
+        // Check if winner already has an active candidate window
+        if (championship.candidate && championship.candidate.playerId === winnerId) {
+            // If winner plays (this game) during candidate window and wins, they become champion
+            if (!championChangedToday(today) && !championship.lostToChampionToday.has(winnerId)) {
+                // For compatibility, set winsInRow to 2
+                championship.winsInRow = 2;
+
+                championshipHistory.push({
+                    date: now,
+                    newChampionId: winnerId,
+                    previousChampionId: loserId,
+                    reason: 'game'
+                });
+
+                championship.championId = winnerId;
+                championship.challengerId = null;
+                championship.candidate = null;
+                championship.lastWinDate = null;
+                championship.lostToChampionToday.clear();
+                championChanged = true;
+            }
         } else {
-            championship.challengerId = winnerId;
-            championship.winsInRow = 1;
-            championship.lastWinDate = today;
+            // Determine if this is the player's first win today (before this game)
+            const gameDayKey = today;
+            const previousWinsToday = games.filter(g => {
+                const gDate = new Date(g.date).toDateString();
+                const winner = g.score1 > g.score2 ? g.player1Id : g.player2Id;
+                return gDate === gameDayKey && winner === winnerId;
+            }).length;
+
+            // previousWinsToday counts wins already recorded earlier today; since we already pushed current game to games,
+            // subtract 1 to check wins before this game
+            const winsBeforeThis = Math.max(0, previousWinsToday - 1);
+
+            if (winsBeforeThis === 0) {
+                // This is the winner's first win today — start candidate window (next two games)
+                championship.candidate = {
+                    playerId: winnerId,
+                    remainingGames: 2,
+                    firstWinDate: today
+                };
+                championship.challengerId = winnerId;
+                championship.lastWinDate = today;
+
+                // For compatibility, set winsInRow to 1
+                championship.winsInRow = 1;
+            }
         }
 
-        // Can only become champion if:
-        // 1. Won 2 games in a row
-        // 2. No championship change happened today already
-        // 3. Didn't lose to the champion earlier today
-        if (championship.winsInRow >= 2 &&
-            !championChangedToday(today) && 
-            !championship.lostToChampionToday.has(winnerId)) {
-            championshipHistory.push({
-                date: now,
-                newChampionId: winnerId,
-                previousChampionId: loserId,
-                reason: 'game'
-            });
-
-            championship.championId = winnerId;
-            championship.challengerId = null;
-            championship.winsInRow = 0;
-            championship.lastWinDate = null;
-            championship.lostToChampionToday.clear();
-            championChanged = true;
+        // If there's a candidate and they played but did not convert to champion (i.e., not the winner here), decrement their remainingGames
+        if (championship.candidate) {
+            const cid = championship.candidate.playerId;
+            if (cid !== winnerId && (p1Id === cid || p2Id === cid)) {
+                championship.candidate.remainingGames -= 1;
+                if (championship.candidate.remainingGames <= 0) {
+                    // candidate window expired
+                    championship.candidate = null;
+                    championship.winsInRow = 0;
+                }
+            }
         }
     } else if (championship.championId === winnerId) {
         // Champion won - track that loser lost to champion today
