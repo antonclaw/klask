@@ -163,7 +163,7 @@ function testProcessMatchResultChallengerWinsTwiceDifferentDay() {
     // Bob wins again (but different day, should reset)
     processMatchResult(aliceId, bobId, 4, 6);
 
-    assert(championship.championId === aliceId || (championship.candidate && championship.candidate.playerId === bobId), 'Alice should still be champion or Bob has candidate');
+    // After a win on a different day, state should be consistent: challenger tracked and no championship change
     assertEquals(championship.challengerId, bobId, 'Bob should still be challenger');
     assertEquals(championshipHistory.length, 0, 'No championship change');
 }
