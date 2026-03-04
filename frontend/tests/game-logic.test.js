@@ -7,7 +7,6 @@ function resetState() {
     players.length = 0;
     championship.championId = null;
     championship.challengerId = null;
-    championship.winsInRow = 0;
     championship.lastWinDate = null;
     championship.lostToChampionToday.clear();
     games.length = 0;
@@ -122,7 +121,6 @@ function testProcessMatchResultChallengerWinsOnce() {
 
     assertEquals(championship.championId, aliceId, 'Alice should still be champion');
     assertEquals(championship.challengerId, bobId, 'Bob should be challenger');
-    assertEquals(championship.winsInRow, 1, 'Should have 1 win in a row');
     assertEquals(championshipHistory.length, 0, 'No championship change yet');
 }
 
@@ -141,7 +139,6 @@ function testProcessMatchResultChallengerWinsTwiceSameDay() {
 
     assertEquals(championship.championId, bobId, 'Bob should be champion');
     assertEquals(championship.challengerId, null, 'No challenger after championship change');
-    assertEquals(championship.winsInRow, 0, 'Wins in row should reset');
     assertEquals(championshipHistory.length, 1, 'Should have 1 championship change');
     assertEquals(championshipHistory[0].newChampionId, bobId, 'Bob should be new champion');
     assertEquals(championshipHistory[0].previousChampionId, aliceId, 'Alice should be previous champion');
@@ -189,7 +186,7 @@ function testProcessMatchResultChampionDefends() {
 
     assertEquals(championship.championId, aliceId, 'Alice should still be champion');
     assertEquals(championship.challengerId, null, 'No challenger after defense');
-    assertEquals(championship.winsInRow, 0, 'Wins in row should reset');
+    // winsInRow removed; ensure no challenger after defense
 }
 
 function testSetChampionManual() {
@@ -224,7 +221,6 @@ function testSetChampionCannotChangeTwiceInOneDay() {
 
     // Bob wins twice to try to take championship on the same day
     processMatchResult(aliceId, bobId, 4, 6); // First win
-    assertEquals(championship.winsInRow, 1, 'Bob should have 1 win in a row');
 
     // Try to win championship on same day (should be silently skipped)
     processMatchResult(aliceId, bobId, 4, 6); // Second win (same day)
@@ -232,7 +228,8 @@ function testSetChampionCannotChangeTwiceInOneDay() {
     // Championship should not have changed
     assertEquals(championship.championId, aliceId, 'Alice should still be champion');
     assertEquals(championshipHistory.length, 1, 'Should still have only 1 championship event');
-    assert(championship.winsInRow === 2 || (championship.candidate && championship.candidate.playerId === bobId), 'Bob should still have 2 wins in a row or candidate started');
+    // Bob should either have candidate window started or equivalent state
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should have candidate started');
 
     // Manual champion change should still be allowed on the same day
     setChampion(charlieId);
@@ -574,7 +571,6 @@ function testLoadStateFromData() {
         championship: {
             championId: 1,
             challengerId: null,
-            winsInRow: 0,
             lastWinDate: null
         },
         games: [
@@ -735,14 +731,15 @@ function testCannotBecomeChampionAfterLosingToday() {
     // B wins A 2 times
     processMatchResult(bId, aId, 6, 4);
     assertEquals(championship.championId, aId, 'A should still be champion after B\'s first win');
-    assert(championship.winsInRow === 1 || (championship.candidate && championship.candidate.playerId === bId), 'B should have 1 win in a row or candidate started');
+    assert(championship.candidate && championship.candidate.playerId === bId, 'B should have candidate started');
 
     const result = processMatchResult(bId, aId, 6, 5);
 
     // B should NOT become champion because B lost to A earlier today
     assertEquals(championship.championId, aId, 'A should still be champion - B lost earlier today');
     assertEquals(result.championChanged, false, 'Championship should not have changed');
-    assertEquals(championship.winsInRow, 2, 'B should have 2 wins in a row but cannot take championship');
+    // Candidate may have 2 remaining plays or similar; ensure championship did not change
+    assertEquals(championship.championId, aId, 'B should not become champion');
 }
 
 // Test: Player who never lost to champion today can become champion
