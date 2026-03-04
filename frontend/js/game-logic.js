@@ -6,9 +6,7 @@ const players = [];
 const championship = {
     championId: null,
     challengerId: null,
-    // Maintain winsInRow for compatibility with existing tests/api
-    winsInRow: 0,
-    // New candidate-based flow
+    // Candidate-based flow
     candidate: null, // { playerId, remainingGames, firstWinDate }
     lastWinDate: null,
     lostToChampionToday: new Set() // Track players who lost to champion today
@@ -93,6 +91,8 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
     // Clear "lost today" set if it's a new day
     if (championship.lastWinDate && championship.lastWinDate !== today) {
         championship.lostToChampionToday.clear();
+        // Clear any candidate window when a new day starts
+        championship.candidate = null;
     }
 
     // Save game to history
@@ -121,9 +121,6 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
         if (championship.candidate && championship.candidate.playerId === winnerId) {
             // If winner plays (this game) during candidate window and wins, they become champion
             if (!championChangedToday(today) && !championship.lostToChampionToday.has(winnerId)) {
-                // For compatibility, set winsInRow to 2
-                championship.winsInRow = 2;
-
                 championshipHistory.push({
                     date: now,
                     newChampionId: winnerId,
@@ -161,8 +158,7 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
                 championship.challengerId = winnerId;
                 championship.lastWinDate = today;
 
-                // For compatibility, set winsInRow to 1
-                championship.winsInRow = 1;
+
             }
         }
 
@@ -174,7 +170,6 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
                 if (championship.candidate.remainingGames <= 0) {
                     // candidate window expired
                     championship.candidate = null;
-                    championship.winsInRow = 0;
                 }
             }
         }
@@ -182,7 +177,6 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
         // Champion won - track that loser lost to champion today
         championship.lostToChampionToday.add(loserId);
         championship.challengerId = null;
-        championship.winsInRow = 0;
         championship.lastWinDate = null;
     }
 
@@ -201,7 +195,6 @@ function setChampion(newChampionId) {
 
     championship.championId = newChampionId;
     championship.challengerId = null;
-    championship.winsInRow = 0;
     championship.lastWinDate = null;
     championship.lostToChampionToday.clear();
 }
@@ -288,7 +281,6 @@ function loadStateFromData(data) {
 
     championship.championId = data.championship.championId;
     championship.challengerId = data.championship.challengerId;
-    championship.winsInRow = data.championship.winsInRow;
     championship.lastWinDate = data.championship.lastWinDate;
     const lostToday = data.championship.lostToChampionToday;
     championship.lostToChampionToday = new Set(Array.isArray(lostToday) ? lostToday : Object.keys(lostToday || {}));
