@@ -126,8 +126,7 @@ app.get('/api/state', async (req, res) => {
                 players: [],
                 championship: {
                     championId: null,
-                    challengerId: null,
-                    winsInRow: 0
+                    challengerId: null
                 }
             };
 
