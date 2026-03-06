@@ -88,6 +88,8 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
     const today = currentDate.toDateString();
     const now = currentDate.toISOString();
 
+    const candidateAtStartId = championship.candidate ? championship.candidate.playerId : null;
+
     // Clear "lost today" set if it's a new day
     if (championship.lastWinDate && championship.lastWinDate !== today) {
         championship.lostToChampionToday.clear();
@@ -106,9 +108,7 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
 
     // Championship logic
     let championChanged = false;
-
-    // Handle candidate window play tracking: if candidate exists and played in this game,
-    // we'll decrement remainingGames if they didn't convert to champion here.
+    let candidateStartedThisGame = false;
 
     if (!championship.championId) {
         championship.championId = winnerId;
@@ -154,27 +154,34 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
                     remainingGames: 2,
                     firstWinDate: today
                 };
+                candidateStartedThisGame = true;
                 championship.challengerId = winnerId;
                 championship.lastWinDate = today;
             }
         }
 
-        // If there's a candidate and they played but did not convert to champion (i.e., not the winner here), decrement their remainingGames
-        if (championship.candidate) {
-            const cid = championship.candidate.playerId;
-            if (cid !== winnerId && (p1Id === cid || p2Id === cid)) {
-                championship.candidate.remainingGames -= 1;
-                if (championship.candidate.remainingGames <= 0) {
-                    // candidate window expired
-                    championship.candidate = null;
-                }
-            }
-        }
     } else if (championship.championId === winnerId) {
         // Champion won - track that loser lost to champion today
         championship.lostToChampionToday.add(loserId);
         championship.challengerId = null;
         championship.lastWinDate = null;
+    }
+
+    // Candidate window consumes only the candidate's next two played games after window start,
+    // regardless of opponent. If candidate converts this game, championChanged=true and candidate is already cleared.
+    if (!championChanged && candidateAtStartId && !candidateStartedThisGame && championship.candidate && championship.candidate.playerId === candidateAtStartId) {
+        if (p1Id === candidateAtStartId || p2Id === candidateAtStartId) {
+            championship.candidate.remainingGames -= 1;
+            if (championship.candidate.remainingGames <= 0) {
+                championship.candidate = null;
+                championship.challengerId = null;
+            }
+        }
+    }
+
+    // Keep challenger in sync with active candidate
+    if (championship.candidate) {
+        championship.challengerId = championship.candidate.playerId;
     }
 
     return {championChanged};
@@ -192,6 +199,7 @@ function setChampion(newChampionId) {
 
     championship.championId = newChampionId;
     championship.challengerId = null;
+    championship.candidate = null;
     championship.lastWinDate = null;
     championship.lostToChampionToday.clear();
 }
@@ -278,6 +286,7 @@ function loadStateFromData(data) {
 
     championship.championId = data.championship.championId;
     championship.challengerId = data.championship.challengerId;
+    championship.candidate = data.championship.candidate || null;
     championship.lastWinDate = data.championship.lastWinDate;
     const lostToday = data.championship.lostToChampionToday;
     championship.lostToChampionToday = new Set(Array.isArray(lostToday) ? lostToday : Object.keys(lostToday || {}));

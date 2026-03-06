@@ -36,6 +36,8 @@ function runTests() {
         testNoCandidateIfWinVsChampionIsNotFirstGameOfDay,
         testProcessMatchResultChallengerWinsTwiceSameDay,
         testProcessMatchResultChallengerWinsTwiceDifferentDay,
+        testCandidateWindowConsumesGamesVsNonChampion,
+        testCandidateWindowExpiresAfterTwoPlaysEvenIfChampionDefends,
         testProcessMatchResultChampionDefends,
         testSetChampionManual,
         testSetChampionCannotChangeTwiceInOneDay,
@@ -202,14 +204,67 @@ function testProcessMatchResultChallengerWinsTwiceDifferentDay() {
     assertEquals(championshipHistory.length, 0, 'No championship change');
 }
 
+function testCandidateWindowConsumesGamesVsNonChampion() {
+    addPlayerToState('Alice');
+    addPlayerToState('Bob');
+    addPlayerToState('Charlie');
+    const aliceId = players[0].id;
+    const bobId = players[1].id;
+    const charlieId = players[2].id;
+
+    // Alice becomes champion without Bob playing yet
+    processMatchResult(aliceId, charlieId, 6, 4);
+
+    // Bob starts candidate window (first game of day, win vs champion)
+    processMatchResult(aliceId, bobId, 4, 6);
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should be candidate');
+    assertEquals(championship.candidate.remainingGames, 2, 'Candidate should start with 2 remaining games');
+
+    // Bob plays two games vs non-champion Charlie
+    processMatchResult(bobId, charlieId, 6, 2);
+    assertEquals(championship.candidate.remainingGames, 1, 'After first next game, 1 remaining');
+
+    processMatchResult(bobId, charlieId, 6, 3);
+    assertEquals(championship.candidate, null, 'Candidate window should expire after second next game');
+    assertEquals(championship.championId, aliceId, 'Alice should remain champion');
+}
+
+function testCandidateWindowExpiresAfterTwoPlaysEvenIfChampionDefends() {
+    addPlayerToState('Alice');
+    addPlayerToState('Bob');
+    addPlayerToState('Charlie');
+    const aliceId = players[0].id;
+    const bobId = players[1].id;
+    const charlieId = players[2].id;
+
+    // Alice becomes champion without Bob playing yet
+    processMatchResult(aliceId, charlieId, 6, 4);
+
+    // Bob starts candidate window
+    processMatchResult(aliceId, bobId, 4, 6);
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should be candidate');
+
+    // Champion defends once (consumes one game from Bob's window)
+    processMatchResult(aliceId, bobId, 6, 4);
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should still be candidate after first consumed game');
+    assertEquals(championship.candidate.remainingGames, 1, 'One game should remain in candidate window');
+
+    // Bob plays one more game (window expires)
+    processMatchResult(bobId, charlieId, 6, 2);
+    assertEquals(championship.candidate, null, 'Candidate window should expire after second consumed game');
+    assertEquals(championship.championId, aliceId, 'Alice should still be champion');
+}
+
 function testProcessMatchResultChampionDefends() {
     addPlayerToState('Alice');
     addPlayerToState('Bob');
+    addPlayerToState('Charlie');
     const aliceId = players[0].id;
     const bobId = players[1].id;
+    const charlieId = players[2].id;
 
-    // Alice becomes champion
-    processMatchResult(aliceId, bobId, 6, 4);
+    // Alice becomes champion without Bob playing yet
+    processMatchResult(aliceId, charlieId, 6, 4);
 
     // Bob challenges once
     processMatchResult(aliceId, bobId, 4, 6);
@@ -218,8 +273,8 @@ function testProcessMatchResultChampionDefends() {
     processMatchResult(aliceId, bobId, 6, 4);
 
     assertEquals(championship.championId, aliceId, 'Alice should still be champion');
-    assertEquals(championship.challengerId, null, 'No challenger after defense');
-    // winsInRow removed; ensure no challenger after defense
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should remain candidate with one game left');
+    assertEquals(championship.candidate.remainingGames, 1, 'Bob should have one remaining game in window');
 }
 
 function testSetChampionManual() {
@@ -603,7 +658,8 @@ function testLoadStateFromData() {
         ],
         championship: {
             championId: 1,
-            challengerId: null,
+            challengerId: 2,
+            candidate: { playerId: 2, remainingGames: 1, firstWinDate: 'Thu Jan 01 2026' },
             lastWinDate: null
         },
         games: [
@@ -619,6 +675,8 @@ function testLoadStateFromData() {
     assertEquals(players.length, 2, 'Should have 2 players');
     assertEquals(players[0].name, 'Alice', 'First player should be Alice');
     assertEquals(championship.championId, 1, 'Champion should be loaded');
+    assert(championship.candidate && championship.candidate.playerId === 2, 'Candidate should be loaded');
+    assertEquals(championship.candidate.remainingGames, 1, 'Candidate remaining games should be loaded');
     assertEquals(games.length, 1, 'Should have 1 game');
     assertEquals(championshipHistory.length, 1, 'Should have 1 championship event');
 }
