@@ -7,6 +7,7 @@ function resetState() {
     players.length = 0;
     championship.championId = null;
     championship.candidate = null;
+    championship.lostToChampionToday.clear();
     games.length = 0;
     championshipHistory.length = 0;
 }
@@ -35,6 +36,7 @@ function runTests() {
         testProcessMatchResultChallengerWinsTwiceDifferentDay,
         testCandidateWindowNotAffectedByGamesVsNonChampion,
         testCandidateLosesThenWinsStillBecomesChampionWithinWindow,
+        testCannotOpenSecondCandidateWindowSameDay,
         testCandidateWindowExpiresAfterTwoChampionGamesEvenIfChampionDefends,
         testProcessMatchResultChampionDefends,
         testSetChampionManual,
@@ -258,6 +260,31 @@ function testCandidateLosesThenWinsStillBecomesChampionWithinWindow() {
     assertEquals(convert.championChanged, true, 'Bob should become champion on next win within window');
     assertEquals(championship.championId, bobId, 'Bob should be new champion');
     assertEquals(championship.candidate, null, 'Candidate should reset after championship change');
+}
+
+function testCannotOpenSecondCandidateWindowSameDay() {
+    addPlayerToState('Alice');
+    addPlayerToState('Bob');
+    addPlayerToState('Charlie');
+    const aliceId = players[0].id;
+    const bobId = players[1].id;
+    const charlieId = players[2].id;
+
+    processMatchResult(aliceId, charlieId, 6, 4); // Alice champion
+
+    // First window starts for Bob
+    processMatchResult(aliceId, bobId, 4, 6);
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should have first candidate window');
+
+    // Bob spends window without conversion
+    processMatchResult(aliceId, bobId, 6, 4);
+    processMatchResult(aliceId, bobId, 6, 3);
+    assertEquals(championship.candidate, null, 'First window should be closed');
+
+    // Bob wins again vs champion on same day, but second window must not open
+    processMatchResult(aliceId, bobId, 4, 6);
+    assertEquals(championship.candidate, null, 'Second candidate window should not open on same day');
+    assertEquals(championship.championId, aliceId, 'Alice should remain champion');
 }
 
 function testCandidateWindowExpiresAfterTwoChampionGamesEvenIfChampionDefends() {
