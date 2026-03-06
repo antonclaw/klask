@@ -5,8 +5,7 @@
 const players = [];
 const championship = {
     championId: null,
-    candidate: null, // { playerId, remainingGames }
-    lostToChampionToday: new Set() // Track players who lost to champion today
+    candidate: null // { playerId, remainingGames }
 };
 const games = [];
 const championshipHistory = [];
@@ -89,7 +88,6 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
 
     const previousGameDay = games.length ? new Date(games[games.length - 1].date).toDateString() : null;
     if (previousGameDay && previousGameDay !== today) {
-        championship.lostToChampionToday.clear();
         championship.candidate = null;
     }
 
@@ -118,7 +116,7 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
         // Check if winner already has an active candidate window
         if (championship.candidate && championship.candidate.playerId === winnerId) {
             // If winner plays (this game) during candidate window and wins, they become champion
-            if (!championAlreadyChangedToday && !championship.lostToChampionToday.has(winnerId)) {
+            if (!championAlreadyChangedToday) {
                 championshipHistory.push({
                     date: now,
                     newChampionId: winnerId,
@@ -128,7 +126,6 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
 
                 championship.championId = winnerId;
                 championship.candidate = null;
-                championship.lostToChampionToday.clear();
                 championChanged = true;
             }
         } else {
@@ -160,9 +157,6 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
             }
         }
 
-    } else if (championship.championId === winnerId) {
-        // Champion won - track that loser lost to champion today
-        championship.lostToChampionToday.add(loserId);
     }
 
     // Candidate window consumes only the candidate's next two games AGAINST current champion.
@@ -193,7 +187,6 @@ function setChampion(newChampionId) {
 
     championship.championId = newChampionId;
     championship.candidate = null;
-    championship.lostToChampionToday.clear();
 }
 
 function removeGameFromHistory(index) {
@@ -280,9 +273,6 @@ function loadStateFromData(data) {
     championship.candidate = data.championship.candidate || (data.championship.challengerId
         ? { playerId: data.championship.challengerId, remainingGames: 2 }
         : null);
-    const lostToday = data.championship.lostToChampionToday;
-    championship.lostToChampionToday = new Set(Array.isArray(lostToday) ? lostToday : Object.keys(lostToday || {}));
-
     games.length = 0;
     if (data.games) {
         games.push(...data.games);
@@ -298,8 +288,7 @@ function getStateForSave() {
     return {
         players,
         championship: {
-            ...championship,
-            lostToChampionToday: Array.from(championship.lostToChampionToday)
+            ...championship
         },
         games,
         championshipHistory

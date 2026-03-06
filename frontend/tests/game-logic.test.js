@@ -7,7 +7,6 @@ function resetState() {
     players.length = 0;
     championship.championId = null;
     championship.candidate = null;
-    championship.lostToChampionToday.clear();
     games.length = 0;
     championshipHistory.length = 0;
 }
@@ -35,6 +34,7 @@ function runTests() {
         testProcessMatchResultChallengerWinsTwiceSameDay,
         testProcessMatchResultChallengerWinsTwiceDifferentDay,
         testCandidateWindowNotAffectedByGamesVsNonChampion,
+        testCandidateLosesThenWinsStillBecomesChampionWithinWindow,
         testCandidateWindowExpiresAfterTwoChampionGamesEvenIfChampionDefends,
         testProcessMatchResultChampionDefends,
         testSetChampionManual,
@@ -53,11 +53,7 @@ function runTests() {
         testCalculateHeadToHeadBasic,
         testCalculateHeadToHeadMultipleOpponents,
         testCalculateHeadToHeadNoGames,
-        testCalculateHeadToHeadSortedByGamesCount,
-        testCannotBecomeChampionAfterLosingToday,
-        testCanBecomeChampionIfNoLossToday,
-        testLostTodaySetClearsOnNewDay,
-        testChampionBeatsMultiplePlayersTracked
+        testCalculateHeadToHeadSortedByGamesCount
     ];
 
     let passed = 0;
@@ -233,6 +229,35 @@ function testCandidateWindowNotAffectedByGamesVsNonChampion() {
     assert(championship.candidate && championship.candidate.playerId === bobId, 'Candidate should remain active');
     assertEquals(championship.candidate.remainingGames, 2, 'Still 2 remaining champion games');
     assertEquals(championship.championId, aliceId, 'Alice should remain champion');
+}
+
+function testCandidateLosesThenWinsStillBecomesChampionWithinWindow() {
+    addPlayerToState('Alice');
+    addPlayerToState('Bob');
+    addPlayerToState('Charlie');
+    const aliceId = players[0].id;
+    const bobId = players[1].id;
+    const charlieId = players[2].id;
+
+    // Alice becomes champion without Bob playing yet
+    processMatchResult(aliceId, charlieId, 6, 4);
+
+    // Bob starts candidate window
+    processMatchResult(aliceId, bobId, 4, 6);
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should be candidate');
+    assertEquals(championship.candidate.remainingGames, 2, 'Bob should have 2 champion games in window');
+
+    // Bob loses one game to champion (window -> 1)
+    const defend = processMatchResult(aliceId, bobId, 6, 4);
+    assertEquals(defend.championChanged, false, 'Champion defense should not change champion');
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should still be candidate');
+    assertEquals(championship.candidate.remainingGames, 1, 'One champion game should remain');
+
+    // Bob wins next game vs champion and should become champion
+    const convert = processMatchResult(aliceId, bobId, 4, 6);
+    assertEquals(convert.championChanged, true, 'Bob should become champion on next win within window');
+    assertEquals(championship.championId, bobId, 'Bob should be new champion');
+    assertEquals(championship.candidate, null, 'Candidate should reset after championship change');
 }
 
 function testCandidateWindowExpiresAfterTwoChampionGamesEvenIfChampionDefends() {
@@ -698,7 +723,7 @@ function testGetStateForSave() {
     addPlayerToState('Alice');
     addPlayerToState('Bob');
     championship.championId = players[0].id;
-    championship.lostToChampionToday.add(players[1].id);
+    championship.candidate = { playerId: players[1].id, remainingGames: 1 };
     games.push({ player1Id: 1, player2Id: 2, score1: 6, score2: 4 });
 
     const state = getStateForSave();
@@ -708,9 +733,8 @@ function testGetStateForSave() {
     assert(state.games !== undefined, 'State should have games');
     assert(state.championshipHistory !== undefined, 'State should have championshipHistory');
     assertEquals(state.players.length, 2, 'Should have 2 players in saved state');
-    assert(Array.isArray(state.championship.lostToChampionToday), 'lostToChampionToday should be serialized as array');
-    assertEquals(state.championship.lostToChampionToday.length, 1, 'lostToChampionToday should have 1 entry');
-    assertEquals(state.championship.lostToChampionToday[0], players[1].id, 'lostToChampionToday should contain Bob\'s id');
+    assert(state.championship.candidate && state.championship.candidate.playerId === players[1].id, 'Candidate should be serialized');
+    assertEquals(state.championship.candidate.remainingGames, 1, 'Candidate remainingGames should be serialized');
 }
 
 function testCalculateHeadToHeadBasic() {
