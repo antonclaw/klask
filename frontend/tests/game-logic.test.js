@@ -668,7 +668,7 @@ function testLoadStateFromData() {
         championship: {
             championId: 1,
             challengerId: 2,
-            candidate: { playerId: 2, remainingGames: 1, firstWinDate: 'Thu Jan 01 2026' },
+            candidate: { playerId: 2, remainingGames: 1 },
             lastWinDate: null
         },
         games: [

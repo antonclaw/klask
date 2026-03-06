@@ -7,7 +7,7 @@ const championship = {
     championId: null,
     challengerId: null,
     // Candidate-based flow
-    candidate: null, // { playerId, remainingGames, firstWinDate }
+    candidate: null, // { playerId, remainingGames }
     lastWinDate: null,
     lostToChampionToday: new Set() // Track players who lost to champion today
 };
@@ -107,6 +107,7 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
     });
 
     // Championship logic
+    const championAlreadyChangedToday = championChangedToday(today);
     let championChanged = false;
     let candidateStartedThisGame = false;
 
@@ -121,7 +122,7 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
         // Check if winner already has an active candidate window
         if (championship.candidate && championship.candidate.playerId === winnerId) {
             // If winner plays (this game) during candidate window and wins, they become champion
-            if (!championChangedToday(today) && !championship.lostToChampionToday.has(winnerId)) {
+            if (!championAlreadyChangedToday && !championship.lostToChampionToday.has(winnerId)) {
                 championshipHistory.push({
                     date: now,
                     newChampionId: winnerId,
@@ -137,24 +138,29 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
                 championChanged = true;
             }
         } else {
-            // Determine if this is the player's first game today AGAINST current champion (before this game)
-            const gameDayKey = today;
-            const previousGamesVsChampionToday = games.filter(g => {
+            // Determine if this is the player's first game today AGAINST current champion (before this game).
+            // Games are append-only in chronological order, so scan backwards until day changes.
+            let previousGamesVsChampionToday = 0;
+            for (let i = games.length - 1; i >= 0; i--) {
+                const g = games[i];
                 const gDate = new Date(g.date).toDateString();
+                if (gDate !== today) break;
+
                 const involvesWinner = g.player1Id === winnerId || g.player2Id === winnerId;
                 const involvesCurrentChampion = g.player1Id === loserId || g.player2Id === loserId;
-                return gDate === gameDayKey && involvesWinner && involvesCurrentChampion;
-            }).length;
+                if (involvesWinner && involvesCurrentChampion) {
+                    previousGamesVsChampionToday++;
+                }
+            }
 
-            // includes current game because it was already pushed; subtract 1 to get games before this one
+            // Count includes current game because it was already pushed; subtract 1 to get games before this one.
             const gamesVsChampionBeforeThis = Math.max(0, previousGamesVsChampionToday - 1);
 
             if (gamesVsChampionBeforeThis === 0) {
                 // This is winner's first game today vs champion and it's a win — start candidate window (next two champion games)
                 championship.candidate = {
                     playerId: winnerId,
-                    remainingGames: 2,
-                    firstWinDate: today
+                    remainingGames: 2
                 };
                 candidateStartedThisGame = true;
                 championship.challengerId = winnerId;
