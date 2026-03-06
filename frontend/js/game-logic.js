@@ -76,6 +76,64 @@ function championChangedToday(today) {
 
 }
 
+function countTodayGamesBetween(playerAId, playerBId, today) {
+    let count = 0;
+    for (let i = games.length - 1; i >= 0; i--) {
+        const g = games[i];
+        const gDate = new Date(g.date).toDateString();
+        if (gDate !== today) break;
+
+        const hasA = g.player1Id === playerAId || g.player2Id === playerAId;
+        const hasB = g.player1Id === playerBId || g.player2Id === playerBId;
+        if (hasA && hasB) count++;
+    }
+    return count;
+}
+
+function tryConvertCandidateOnChampionWin(winnerId, previousChampionId, now, championAlreadyChangedToday) {
+    if (!championship.candidate || championship.candidate.playerId !== winnerId) return false;
+    if (championAlreadyChangedToday) return false;
+
+    championshipHistory.push({
+        date: now,
+        newChampionId: winnerId,
+        previousChampionId,
+        reason: 'game'
+    });
+
+    championship.championId = winnerId;
+    championship.candidate = null;
+    return true;
+}
+
+function maybeStartCandidateWindow(winnerId, championId, today) {
+    if (championship.candidate) return false;
+
+    const gamesVsChampionToday = countTodayGamesBetween(winnerId, championId, today);
+    const gamesVsChampionBeforeThis = Math.max(0, gamesVsChampionToday - 1);
+    if (gamesVsChampionBeforeThis !== 0) return false;
+
+    championship.candidate = {
+        playerId: winnerId,
+        remainingGames: 2
+    };
+    return true;
+}
+
+function consumeCandidateWindowIfNeeded(p1Id, p2Id, candidateAtStartId, candidateStartedThisGame, championChanged) {
+    if (championChanged || !candidateAtStartId || candidateStartedThisGame) return;
+    if (!championship.candidate || championship.candidate.playerId !== candidateAtStartId) return;
+
+    const candidatePlayed = p1Id === candidateAtStartId || p2Id === candidateAtStartId;
+    const gameVsChampion = p1Id === championship.championId || p2Id === championship.championId;
+    if (!candidatePlayed || !gameVsChampion) return;
+
+    championship.candidate.remainingGames -= 1;
+    if (championship.candidate.remainingGames <= 0) {
+        championship.candidate = null;
+    }
+}
+
 function processMatchResult(p1Id, p2Id, score1, score2) {
     const winnerId = score1 > score2 ? p1Id : p2Id;
     const loserId = score1 > score2 ? p2Id : p1Id;
@@ -91,16 +149,14 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
         championship.candidate = null;
     }
 
-    // Save game to history
     games.push({
         date: now,
         player1Id: p1Id,
         player2Id: p2Id,
-        score1: score1,
-        score2: score2
+        score1,
+        score2
     });
 
-    // Championship logic
     const championAlreadyChangedToday = championChangedToday(today);
     let championChanged = false;
     let candidateStartedThisGame = false;
@@ -108,69 +164,13 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
     if (!championship.championId) {
         championship.championId = winnerId;
     } else if (championship.championId === loserId) {
-        // Champion lost
-        // New rule (champion-only): to become champion, a player must
-        // (1) win their first game of the day against the champion, then
-        // (2) win at least one of their next two games against the champion.
-
-        // Check if winner already has an active candidate window
-        if (championship.candidate && championship.candidate.playerId === winnerId) {
-            // If winner plays (this game) during candidate window and wins, they become champion
-            if (!championAlreadyChangedToday) {
-                championshipHistory.push({
-                    date: now,
-                    newChampionId: winnerId,
-                    previousChampionId: loserId,
-                    reason: 'game'
-                });
-
-                championship.championId = winnerId;
-                championship.candidate = null;
-                championChanged = true;
-            }
-        } else {
-            // Determine if this is the player's first game today AGAINST current champion (before this game).
-            // Games are append-only in chronological order, so scan backwards until day changes.
-            let previousGamesVsChampionToday = 0;
-            for (let i = games.length - 1; i >= 0; i--) {
-                const g = games[i];
-                const gDate = new Date(g.date).toDateString();
-                if (gDate !== today) break;
-
-                const involvesWinner = g.player1Id === winnerId || g.player2Id === winnerId;
-                const involvesCurrentChampion = g.player1Id === loserId || g.player2Id === loserId;
-                if (involvesWinner && involvesCurrentChampion) {
-                    previousGamesVsChampionToday++;
-                }
-            }
-
-            // Count includes current game because it was already pushed; subtract 1 to get games before this one.
-            const gamesVsChampionBeforeThis = Math.max(0, previousGamesVsChampionToday - 1);
-
-            if (gamesVsChampionBeforeThis === 0) {
-                // This is winner's first game today vs champion and it's a win — start candidate window (next two champion games)
-                championship.candidate = {
-                    playerId: winnerId,
-                    remainingGames: 2
-                };
-                candidateStartedThisGame = true;
-            }
-        }
-
-    }
-
-    // Candidate window consumes only the candidate's next two games AGAINST current champion.
-    // If candidate converts this game, championChanged=true and candidate is already cleared.
-    if (!championChanged && candidateAtStartId && !candidateStartedThisGame && championship.candidate && championship.candidate.playerId === candidateAtStartId) {
-        const candidatePlayed = p1Id === candidateAtStartId || p2Id === candidateAtStartId;
-        const gameVsChampion = p1Id === championship.championId || p2Id === championship.championId;
-        if (candidatePlayed && gameVsChampion) {
-            championship.candidate.remainingGames -= 1;
-            if (championship.candidate.remainingGames <= 0) {
-                championship.candidate = null;
-            }
+        championChanged = tryConvertCandidateOnChampionWin(winnerId, loserId, now, championAlreadyChangedToday);
+        if (!championChanged) {
+            candidateStartedThisGame = maybeStartCandidateWindow(winnerId, loserId, today);
         }
     }
+
+    consumeCandidateWindowIfNeeded(p1Id, p2Id, candidateAtStartId, candidateStartedThisGame, championChanged);
 
     return {championChanged};
 }
