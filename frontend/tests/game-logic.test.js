@@ -168,8 +168,13 @@ function testProcessMatchResultChallengerWinsTwiceSameDay() {
     processMatchResult(aliceId, charlieId, 6, 4);
 
     // Bob wins twice against Alice on same day
-    processMatchResult(aliceId, bobId, 4, 6);
-    processMatchResult(aliceId, bobId, 4, 6);
+    const firstWin = processMatchResult(aliceId, bobId, 4, 6);
+    assertEquals(firstWin.championChanged, false, 'First win should not change champion yet');
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should become candidate after first win');
+    assertEquals(championship.candidate.remainingGames, 2, 'Bob should have 2 champion games in window after first win');
+
+    const secondWin = processMatchResult(aliceId, bobId, 4, 6);
+    assertEquals(secondWin.championChanged, true, 'Second win in window should change champion');
 
     assertEquals(championship.championId, bobId, 'Bob should be champion');
     assertEquals(championship.challengerId, null, 'No challenger after championship change');
@@ -317,16 +322,20 @@ function testSetChampionCannotChangeTwiceInOneDay() {
     assertEquals(championshipHistory.length, 1, 'Should have 1 championship event');
 
     // Bob wins twice to try to take championship on the same day
-    processMatchResult(aliceId, bobId, 4, 6); // First win
+    const firstWin = processMatchResult(aliceId, bobId, 4, 6); // First win
+    assertEquals(firstWin.championChanged, false, 'First win should not change champion');
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should have candidate started after first win');
+    assertEquals(championship.candidate.remainingGames, 2, 'Bob should have 2 champion games left in window');
 
-    // Try to win championship on same day (should be silently skipped)
-    processMatchResult(aliceId, bobId, 4, 6); // Second win (same day)
+    // Try to win championship on same day (should be skipped because champion already changed today manually)
+    const secondWin = processMatchResult(aliceId, bobId, 4, 6); // Second win (same day)
+    assertEquals(secondWin.championChanged, false, 'Second win should not change champion when champion already changed today');
 
     // Championship should not have changed
     assertEquals(championship.championId, aliceId, 'Alice should still be champion');
     assertEquals(championshipHistory.length, 1, 'Should still have only 1 championship event');
-    // Bob should either have candidate window started or equivalent state
-    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should have candidate started');
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should still have candidate');
+    assertEquals(championship.candidate.remainingGames, 1, 'One champion game should remain after second attempt is consumed');
 
     // Manual champion change should still be allowed on the same day
     setChampion(charlieId);
