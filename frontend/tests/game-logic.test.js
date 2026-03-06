@@ -7,7 +7,6 @@ function resetState() {
     players.length = 0;
     championship.championId = null;
     championship.candidate = null;
-    championship.lostToChampionToday.clear();
     games.length = 0;
     championshipHistory.length = 0;
 }
@@ -866,7 +865,7 @@ function testCalculateHeadToHeadSortedByGamesCount() {
     assertEquals(aliceH2H[2].gamesAgainst, 3, 'Charlie should have 3 games');
 }
 
-// Test: Player who lost to champion today cannot become champion (user scenario)
+// Test: if player's first game vs champion today is a loss, later wins cannot open window
 function testCannotBecomeChampionAfterLosingToday() {
     addPlayerToState('A');
     addPlayerToState('B');
@@ -875,33 +874,21 @@ function testCannotBecomeChampionAfterLosingToday() {
     const bId = players[1].id;
     const cId = players[2].id;
 
-    // A becomes champion (without B having played yet)
-    processMatchResult(aId, cId, 6, 4);
-    assertEquals(championship.championId, aId, 'A should be champion');
+    processMatchResult(aId, cId, 6, 4); // A champion
 
-    // B loses to A (this is B's first game today)
+    // B's first game vs champion today is loss
     processMatchResult(aId, bId, 6, 3);
-    assert(championship.lostToChampionToday.has(bId), 'B should be in lostToChampionToday set');
 
-    // C loses to A
-    processMatchResult(aId, cId, 6, 2);
-    assert(championship.lostToChampionToday.has(cId), 'C should be in lostToChampionToday set');
-
-    // B wins A 2 times
+    // Later wins vs champion same day should not create candidate window
     processMatchResult(bId, aId, 6, 4);
-    assertEquals(championship.championId, aId, 'A should still be champion after B\'s first win');
-    assertEquals(championship.candidate, null, 'B should not have candidate: win vs champion was not first game of day');
+    assertEquals(championship.candidate, null, 'Candidate should not start when first champion game was a loss');
 
     const result = processMatchResult(bId, aId, 6, 5);
-
-    // B should NOT become champion because B lost to A earlier today
-    assertEquals(championship.championId, aId, 'A should still be champion - B lost earlier today');
-    assertEquals(result.championChanged, false, 'Championship should not have changed');
-    // Candidate may have 2 remaining plays or similar; ensure championship did not change
-    assertEquals(championship.championId, aId, 'B should not become champion');
+    assertEquals(result.championChanged, false, 'Championship should not change');
+    assertEquals(championship.championId, aId, 'A should still be champion');
 }
 
-// Test: Player who never lost to champion today can become champion
+// Test: another player whose first game vs champion is win can still become champion
 function testCanBecomeChampionIfNoLossToday() {
     addPlayerToState('A');
     addPlayerToState('B');
@@ -910,50 +897,46 @@ function testCanBecomeChampionIfNoLossToday() {
     const bId = players[1].id;
     const cId = players[2].id;
 
-    // A becomes champion
-    processMatchResult(aId, bId, 6, 4);
+    processMatchResult(aId, bId, 6, 4); // A champion
 
-    // B loses to A
+    // B loses to A (irrelevant for C)
     processMatchResult(aId, bId, 6, 3);
-    assert(championship.lostToChampionToday.has(bId), 'B should be in lostToChampionToday set');
 
-    // C never lost to A, wins twice
+    // C's first game vs champion is a win, then conversion win
     processMatchResult(cId, aId, 6, 4);
     processMatchResult(cId, aId, 6, 5);
 
-    // C SHOULD become champion
-    assertEquals(championship.championId, cId, 'C should be champion - never lost to A today');
+    assertEquals(championship.championId, cId, 'C should become champion');
 }
 
-// Test: lostToChampionToday set clears on new day
+// Test: window can open again on a new day after a failed day
 function testLostTodaySetClearsOnNewDay() {
     addPlayerToState('A');
     addPlayerToState('B');
     const aId = players[0].id;
     const bId = players[1].id;
 
-    // A becomes champion
-    processMatchResult(aId, bId, 6, 4);
+    processMatchResult(aId, bId, 6, 4); // A champion
 
-    // B loses to A today
+    // Day 1: B's first champion game is a loss
     processMatchResult(aId, bId, 6, 3);
-    assert(championship.lostToChampionToday.has(bId), 'B should be in lostToChampionToday set');
+    processMatchResult(bId, aId, 6, 4);
+    assertEquals(championship.candidate, null, 'No candidate on day 1 after first-game loss');
 
-    // Simulate new day by moving existing games out of "today"
+    // Move games to previous day
     games.forEach(g => {
         g.date = '2024-01-01T10:00:00Z';
     });
 
-    // B wins once on new day - set should be refreshed for the new day
+    // Day 2: B can start window and convert
     processMatchResult(bId, aId, 6, 4);
-    assert(championship.lostToChampionToday.has(bId), 'B should be tracked for new day after opening window');
+    assert(championship.candidate && championship.candidate.playerId === bId, 'Candidate should start on new day');
 
-    // B wins again - should become champion now
     processMatchResult(bId, aId, 6, 5);
     assertEquals(championship.championId, bId, 'B should become champion on new day');
 }
 
-// Test: Champion beating multiple players tracks them all
+// Test: champion can beat multiple players, rules still depend on each player's first champion game
 function testChampionBeatsMultiplePlayersTracked() {
     addPlayerToState('A');
     addPlayerToState('B');
@@ -964,21 +947,14 @@ function testChampionBeatsMultiplePlayersTracked() {
     const cId = players[2].id;
     const dId = players[3].id;
 
-    // A becomes champion
-    processMatchResult(aId, bId, 6, 4);
+    processMatchResult(aId, bId, 6, 4); // A champion
 
-    // A beats B, C, D
+    // A beats B, C, D first
     processMatchResult(aId, bId, 6, 3);
     processMatchResult(aId, cId, 6, 2);
     processMatchResult(aId, dId, 6, 0);
 
-    // All should be tracked
-    assert(championship.lostToChampionToday.has(bId), 'B should be tracked');
-    assert(championship.lostToChampionToday.has(cId), 'C should be tracked');
-    assert(championship.lostToChampionToday.has(dId), 'D should be tracked');
-    assertEquals(championship.lostToChampionToday.size, 3, 'Should track 3 players');
-
-    // None of them should be able to become champion today
+    // B cannot become champion today because first champion game was a loss
     processMatchResult(bId, aId, 6, 4);
     processMatchResult(bId, aId, 6, 5);
     assertEquals(championship.championId, aId, 'A should still be champion');
