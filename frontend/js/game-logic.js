@@ -5,10 +5,7 @@
 const players = [];
 const championship = {
     championId: null,
-    challengerId: null,
-    // Candidate-based flow
     candidate: null, // { playerId, remainingGames }
-    lastWinDate: null,
     lostToChampionToday: new Set() // Track players who lost to champion today
 };
 const games = [];
@@ -90,10 +87,9 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
 
     const candidateAtStartId = championship.candidate ? championship.candidate.playerId : null;
 
-    // Clear "lost today" set if it's a new day
-    if (championship.lastWinDate && championship.lastWinDate !== today) {
+    const previousGameDay = games.length ? new Date(games[games.length - 1].date).toDateString() : null;
+    if (previousGameDay && previousGameDay !== today) {
         championship.lostToChampionToday.clear();
-        // Clear any candidate window when a new day starts
         championship.candidate = null;
     }
 
@@ -131,9 +127,7 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
                 });
 
                 championship.championId = winnerId;
-                championship.challengerId = null;
                 championship.candidate = null;
-                championship.lastWinDate = null;
                 championship.lostToChampionToday.clear();
                 championChanged = true;
             }
@@ -163,16 +157,12 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
                     remainingGames: 2
                 };
                 candidateStartedThisGame = true;
-                championship.challengerId = winnerId;
-                championship.lastWinDate = today;
             }
         }
 
     } else if (championship.championId === winnerId) {
         // Champion won - track that loser lost to champion today
         championship.lostToChampionToday.add(loserId);
-        championship.challengerId = null;
-        championship.lastWinDate = null;
     }
 
     // Candidate window consumes only the candidate's next two games AGAINST current champion.
@@ -184,14 +174,8 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
             championship.candidate.remainingGames -= 1;
             if (championship.candidate.remainingGames <= 0) {
                 championship.candidate = null;
-                championship.challengerId = null;
             }
         }
-    }
-
-    // Keep challenger in sync with active candidate
-    if (championship.candidate) {
-        championship.challengerId = championship.candidate.playerId;
     }
 
     return {championChanged};
@@ -208,9 +192,7 @@ function setChampion(newChampionId) {
     }
 
     championship.championId = newChampionId;
-    championship.challengerId = null;
     championship.candidate = null;
-    championship.lastWinDate = null;
     championship.lostToChampionToday.clear();
 }
 
@@ -295,9 +277,9 @@ function loadStateFromData(data) {
     players.push(...data.players);
 
     championship.championId = data.championship.championId;
-    championship.challengerId = data.championship.challengerId;
-    championship.candidate = data.championship.candidate || null;
-    championship.lastWinDate = data.championship.lastWinDate;
+    championship.candidate = data.championship.candidate || (data.championship.challengerId
+        ? { playerId: data.championship.challengerId, remainingGames: 2 }
+        : null);
     const lostToday = data.championship.lostToChampionToday;
     championship.lostToChampionToday = new Set(Array.isArray(lostToday) ? lostToday : Object.keys(lostToday || {}));
 

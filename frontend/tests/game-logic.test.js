@@ -6,9 +6,7 @@
 function resetState() {
     players.length = 0;
     championship.championId = null;
-    championship.challengerId = null;
     championship.candidate = null;
-    championship.lastWinDate = null;
     championship.lostToChampionToday.clear();
     games.length = 0;
     championshipHistory.length = 0;
@@ -126,7 +124,7 @@ function testProcessMatchResultChallengerWinsOnce() {
     processMatchResult(aliceId, bobId, 4, 6);
 
     assertEquals(championship.championId, aliceId, 'Alice should still be champion');
-    assertEquals(championship.challengerId, bobId, 'Bob should be challenger');
+    assert(championship.candidate && championship.candidate.playerId === bobId, 'Bob should be challenger candidate');
     assertEquals(championshipHistory.length, 0, 'No championship change yet');
 }
 
@@ -151,7 +149,7 @@ function testNoCandidateIfWinVsChampionIsNotFirstChampionGameOfDay() {
     processMatchResult(aliceId, bobId, 4, 6);
 
     assertEquals(championship.championId, aliceId, 'Alice should still be champion');
-    assertEquals(championship.challengerId, null, 'Bob should not become challenger when win is not first game vs champion of day');
+    assertEquals(championship.candidate, null, 'Bob should not become challenger when win is not first game vs champion of day');
     assertEquals(championshipHistory.length, 0, 'No championship change yet');
     assertEquals(championship.candidate, null, 'Candidate should not be created');
 }
@@ -177,7 +175,7 @@ function testProcessMatchResultChallengerWinsTwiceSameDay() {
     assertEquals(secondWin.championChanged, true, 'Second win in window should change champion');
 
     assertEquals(championship.championId, bobId, 'Bob should be champion');
-    assertEquals(championship.challengerId, null, 'No challenger after championship change');
+    assertEquals(championship.candidate, null, 'No challenger after championship change');
     assertEquals(championshipHistory.length, 1, 'Should have 1 championship change');
     assertEquals(championshipHistory[0].newChampionId, bobId, 'Bob should be new champion');
     assertEquals(championshipHistory[0].previousChampionId, aliceId, 'Alice should be previous champion');
@@ -198,8 +196,7 @@ function testProcessMatchResultChallengerWinsTwiceDifferentDay() {
     // Bob wins once (starts candidate window)
     processMatchResult(aliceId, bobId, 4, 6);
 
-    // Simulate different day by changing lastWinDate and old game dates
-    championship.lastWinDate = 'Mon Jan 01 2024';
+    // Simulate different day by moving old games out of today
     games.forEach(g => {
         g.date = '2024-01-01T10:00:00Z';
     });
@@ -676,9 +673,7 @@ function testLoadStateFromData() {
         ],
         championship: {
             championId: 1,
-            challengerId: 2,
-            candidate: { playerId: 2, remainingGames: 1 },
-            lastWinDate: null
+            candidate: { playerId: 2, remainingGames: 1 }
         },
         games: [
             { player1Id: 1, player2Id: 2, score1: 6, score2: 4 }
@@ -889,9 +884,7 @@ function testLostTodaySetClearsOnNewDay() {
     processMatchResult(aId, bId, 6, 3);
     assert(championship.lostToChampionToday.has(bId), 'B should be in lostToChampionToday set');
 
-    // Simulate new day
-    championship.lastWinDate = 'Mon Jan 01 2024';
-    // Also move existing games out of "today" so first-game-of-day checks are realistic
+    // Simulate new day by moving existing games out of "today"
     games.forEach(g => {
         g.date = '2024-01-01T10:00:00Z';
     });
