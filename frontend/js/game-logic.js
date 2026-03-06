@@ -114,8 +114,9 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
         championship.championId = winnerId;
     } else if (championship.championId === loserId) {
         // Champion lost
-        // New rule: to become champion, a player must (1) win their first game of the day
-        // against the champion, then (2) within their next two games become champion by winning at least one.
+        // New rule (champion-only): to become champion, a player must
+        // (1) win their first game of the day against the champion, then
+        // (2) win at least one of their next two games against the champion.
 
         // Check if winner already has an active candidate window
         if (championship.candidate && championship.candidate.playerId === winnerId) {
@@ -136,19 +137,20 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
                 championChanged = true;
             }
         } else {
-            // Determine if this is the player's first game today (before this game)
+            // Determine if this is the player's first game today AGAINST current champion (before this game)
             const gameDayKey = today;
-            const previousGamesToday = games.filter(g => {
+            const previousGamesVsChampionToday = games.filter(g => {
                 const gDate = new Date(g.date).toDateString();
-                return gDate === gameDayKey && (g.player1Id === winnerId || g.player2Id === winnerId);
+                const involvesWinner = g.player1Id === winnerId || g.player2Id === winnerId;
+                const involvesCurrentChampion = g.player1Id === loserId || g.player2Id === loserId;
+                return gDate === gameDayKey && involvesWinner && involvesCurrentChampion;
             }).length;
 
-            // previousGamesToday includes the current game because it was already pushed;
-            // subtract 1 to get games before this one.
-            const gamesBeforeThis = Math.max(0, previousGamesToday - 1);
+            // includes current game because it was already pushed; subtract 1 to get games before this one
+            const gamesVsChampionBeforeThis = Math.max(0, previousGamesVsChampionToday - 1);
 
-            if (gamesBeforeThis === 0) {
-                // This is the winner's first game today and it's a win — start candidate window (next two games)
+            if (gamesVsChampionBeforeThis === 0) {
+                // This is winner's first game today vs champion and it's a win — start candidate window (next two champion games)
                 championship.candidate = {
                     playerId: winnerId,
                     remainingGames: 2,
@@ -167,10 +169,12 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
         championship.lastWinDate = null;
     }
 
-    // Candidate window consumes only the candidate's next two played games after window start,
-    // regardless of opponent. If candidate converts this game, championChanged=true and candidate is already cleared.
+    // Candidate window consumes only the candidate's next two games AGAINST current champion.
+    // If candidate converts this game, championChanged=true and candidate is already cleared.
     if (!championChanged && candidateAtStartId && !candidateStartedThisGame && championship.candidate && championship.candidate.playerId === candidateAtStartId) {
-        if (p1Id === candidateAtStartId || p2Id === candidateAtStartId) {
+        const candidatePlayed = p1Id === candidateAtStartId || p2Id === candidateAtStartId;
+        const gameVsChampion = p1Id === championship.championId || p2Id === championship.championId;
+        if (candidatePlayed && gameVsChampion) {
             championship.candidate.remainingGames -= 1;
             if (championship.candidate.remainingGames <= 0) {
                 championship.candidate = null;
