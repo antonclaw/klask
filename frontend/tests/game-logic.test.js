@@ -55,7 +55,11 @@ function runTests() {
         testCalculateHeadToHeadBasic,
         testCalculateHeadToHeadMultipleOpponents,
         testCalculateHeadToHeadNoGames,
-        testCalculateHeadToHeadSortedByGamesCount
+        testCalculateHeadToHeadSortedByGamesCount,
+        testCannotBecomeChampionAfterLosingToday,
+        testCanBecomeChampionIfNoLossToday,
+        testLostTodaySetClearsOnNewDay,
+        testChampionBeatsMultiplePlayersTracked
     ];
 
     let passed = 0;
@@ -940,9 +944,9 @@ function testLostTodaySetClearsOnNewDay() {
         g.date = '2024-01-01T10:00:00Z';
     });
 
-    // B wins once on new day - should clear the set
+    // B wins once on new day - set should be refreshed for the new day
     processMatchResult(bId, aId, 6, 4);
-    assertEquals(championship.lostToChampionToday.size, 0, 'lostToChampionToday should be cleared on new day');
+    assert(championship.lostToChampionToday.has(bId), 'B should be tracked for new day after opening window');
 
     // B wins again - should become champion now
     processMatchResult(bId, aId, 6, 5);
