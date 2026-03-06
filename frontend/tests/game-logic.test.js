@@ -7,6 +7,7 @@ function resetState() {
     players.length = 0;
     championship.championId = null;
     championship.challengerId = null;
+    championship.candidate = null;
     championship.lastWinDate = null;
     championship.lostToChampionToday.clear();
     games.length = 0;
@@ -32,6 +33,7 @@ function runTests() {
         testAddPlayerToState,
         testProcessMatchResultFirstGame,
         testProcessMatchResultChallengerWinsOnce,
+        testNoCandidateIfWinVsChampionIsNotFirstGameOfDay,
         testProcessMatchResultChallengerWinsTwiceSameDay,
         testProcessMatchResultChallengerWinsTwiceDifferentDay,
         testProcessMatchResultChampionDefends,
@@ -110,13 +112,15 @@ function testProcessMatchResultFirstGame() {
 function testProcessMatchResultChallengerWinsOnce() {
     addPlayerToState('Alice');
     addPlayerToState('Bob');
+    addPlayerToState('Charlie');
     const aliceId = players[0].id;
     const bobId = players[1].id;
+    const charlieId = players[2].id;
 
-    // Alice becomes champion
-    processMatchResult(aliceId, bobId, 6, 4);
+    // Alice becomes champion without Bob having played today
+    processMatchResult(aliceId, charlieId, 6, 4);
 
-    // Bob wins once against Alice
+    // Bob wins once against Alice (first game of Bob's day)
     processMatchResult(aliceId, bobId, 4, 6);
 
     assertEquals(championship.championId, aliceId, 'Alice should still be champion');
@@ -124,14 +128,39 @@ function testProcessMatchResultChallengerWinsOnce() {
     assertEquals(championshipHistory.length, 0, 'No championship change yet');
 }
 
-function testProcessMatchResultChallengerWinsTwiceSameDay() {
+function testNoCandidateIfWinVsChampionIsNotFirstGameOfDay() {
     addPlayerToState('Alice');
     addPlayerToState('Bob');
+    addPlayerToState('Charlie');
     const aliceId = players[0].id;
     const bobId = players[1].id;
+    const charlieId = players[2].id;
 
     // Alice becomes champion
     processMatchResult(aliceId, bobId, 6, 4);
+
+    // Bob plays his first game of day and loses to Charlie
+    processMatchResult(bobId, charlieId, 4, 6);
+
+    // Bob then beats champion Alice, but this is NOT his first game today
+    processMatchResult(aliceId, bobId, 4, 6);
+
+    assertEquals(championship.championId, aliceId, 'Alice should still be champion');
+    assertEquals(championship.challengerId, null, 'Bob should not become challenger when win is not first game of day');
+    assertEquals(championshipHistory.length, 0, 'No championship change yet');
+    assertEquals(championship.candidate, null, 'Candidate should not be created');
+}
+
+function testProcessMatchResultChallengerWinsTwiceSameDay() {
+    addPlayerToState('Alice');
+    addPlayerToState('Bob');
+    addPlayerToState('Charlie');
+    const aliceId = players[0].id;
+    const bobId = players[1].id;
+    const charlieId = players[2].id;
+
+    // Alice becomes champion without Bob having played today
+    processMatchResult(aliceId, charlieId, 6, 4);
 
     // Bob wins twice against Alice on same day
     processMatchResult(aliceId, bobId, 4, 6);
@@ -148,22 +177,28 @@ function testProcessMatchResultChallengerWinsTwiceSameDay() {
 function testProcessMatchResultChallengerWinsTwiceDifferentDay() {
     addPlayerToState('Alice');
     addPlayerToState('Bob');
+    addPlayerToState('Charlie');
     const aliceId = players[0].id;
     const bobId = players[1].id;
+    const charlieId = players[2].id;
 
-    // Alice becomes champion
-    processMatchResult(aliceId, bobId, 6, 4);
+    // Alice becomes champion without Bob having played today
+    processMatchResult(aliceId, charlieId, 6, 4);
 
-    // Bob wins once
+    // Bob wins once (starts candidate window)
     processMatchResult(aliceId, bobId, 4, 6);
 
-    // Simulate different day by changing lastWinDate
+    // Simulate different day by changing lastWinDate and old game dates
     championship.lastWinDate = 'Mon Jan 01 2024';
+    games.forEach(g => {
+        g.date = '2024-01-01T10:00:00Z';
+    });
 
-    // Bob wins again (but different day, should reset)
+    // Bob wins again on a new day: should start a fresh window, not become champion yet
     processMatchResult(aliceId, bobId, 4, 6);
 
     // After a win on a different day, ensure no championship change occurred
+    assertEquals(championship.championId, aliceId, 'Alice should still be champion');
     assertEquals(championshipHistory.length, 0, 'No championship change');
 }
 
@@ -714,11 +749,11 @@ function testCannotBecomeChampionAfterLosingToday() {
     const bId = players[1].id;
     const cId = players[2].id;
 
-    // A becomes champion
-    processMatchResult(aId, bId, 6, 4);
+    // A becomes champion (without B having played yet)
+    processMatchResult(aId, cId, 6, 4);
     assertEquals(championship.championId, aId, 'A should be champion');
 
-    // B loses to A
+    // B loses to A (this is B's first game today)
     processMatchResult(aId, bId, 6, 3);
     assert(championship.lostToChampionToday.has(bId), 'B should be in lostToChampionToday set');
 
@@ -729,7 +764,7 @@ function testCannotBecomeChampionAfterLosingToday() {
     // B wins A 2 times
     processMatchResult(bId, aId, 6, 4);
     assertEquals(championship.championId, aId, 'A should still be champion after B\'s first win');
-    assert(championship.candidate && championship.candidate.playerId === bId, 'B should have candidate started');
+    assertEquals(championship.candidate, null, 'B should not have candidate: win vs champion was not first game of day');
 
     const result = processMatchResult(bId, aId, 6, 5);
 
@@ -780,6 +815,10 @@ function testLostTodaySetClearsOnNewDay() {
 
     // Simulate new day
     championship.lastWinDate = 'Mon Jan 01 2024';
+    // Also move existing games out of "today" so first-game-of-day checks are realistic
+    games.forEach(g => {
+        g.date = '2024-01-01T10:00:00Z';
+    });
 
     // B wins once on new day - should clear the set
     processMatchResult(bId, aId, 6, 4);

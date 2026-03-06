@@ -136,20 +136,19 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
                 championChanged = true;
             }
         } else {
-            // Determine if this is the player's first win today (before this game)
+            // Determine if this is the player's first game today (before this game)
             const gameDayKey = today;
-            const previousWinsToday = games.filter(g => {
+            const previousGamesToday = games.filter(g => {
                 const gDate = new Date(g.date).toDateString();
-                const winner = g.score1 > g.score2 ? g.player1Id : g.player2Id;
-                return gDate === gameDayKey && winner === winnerId;
+                return gDate === gameDayKey && (g.player1Id === winnerId || g.player2Id === winnerId);
             }).length;
 
-            // previousWinsToday counts wins already recorded earlier today; since we already pushed current game to games,
-            // subtract 1 to check wins before this game
-            const winsBeforeThis = Math.max(0, previousWinsToday - 1);
+            // previousGamesToday includes the current game because it was already pushed;
+            // subtract 1 to get games before this one.
+            const gamesBeforeThis = Math.max(0, previousGamesToday - 1);
 
-            if (winsBeforeThis === 0) {
-                // This is the winner's first win today — start candidate window (next two games)
+            if (gamesBeforeThis === 0) {
+                // This is the winner's first game today and it's a win — start candidate window (next two games)
                 championship.candidate = {
                     playerId: winnerId,
                     remainingGames: 2,
@@ -157,8 +156,6 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
                 };
                 championship.challengerId = winnerId;
                 championship.lastWinDate = today;
-
-
             }
         }
 
