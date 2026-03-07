@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "installCommand": "npm ci && npm --prefix frontend/klask-4 ci",
-  "buildCommand": "npm --prefix frontend/klask-4 run build",
+  "installCommand": "npm ci && npm --prefix frontend/klask ci",
+  "buildCommand": "npm --prefix frontend/klask run build",
   "builds": [
     {
       "src": "api/index.js",
@@ -18,12 +18,20 @@
       "dest": "/api/index.js"
     },
     {
-      "src": "/klask-4",
-      "dest": "/frontend/klask-4/dist/index.html"
+      "src": "/",
+      "dest": "/frontend/klask/dist/index.html"
     },
     {
-      "src": "/klask-4/(.*)",
-      "dest": "/frontend/klask-4/dist/$1"
+      "src": "/assets/(.*)",
+      "dest": "/frontend/klask/dist/assets/$1"
+    },
+    {
+      "src": "/klask-4",
+      "dest": "/frontend/klask/dist/klask-4.html"
+    },
+    {
+      "src": "/klask-4/",
+      "dest": "/frontend/klask/dist/klask-4.html"
     },
     {
       "src": "/(.*)",

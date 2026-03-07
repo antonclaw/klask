@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "test": "node frontend/tests/test-node.js",
-    "test:coverage": "c8 --reporter=text --reporter=lcov --check-coverage --include=frontend/js/game-logic.js --branches 100 --functions 100 --lines 100 --statements 100 node frontend/tests/test-node.js"
+    "test:coverage": "c8 --reporter=text --reporter=lcov --check-coverage --include=frontend/klask/public/legacy/js/game-logic.js --branches 100 --functions 100 --lines 100 --statements 100 node frontend/tests/test-node.js"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",

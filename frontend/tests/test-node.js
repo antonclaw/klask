@@ -8,12 +8,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Load scripts and execute with explicit filenames so c8 can map coverage.
-const gameLogicCode = readFileSync(join(__dirname, '../js/game-logic.js'), 'utf8');
+const gameLogicPath = join(__dirname, '../klask/public/legacy/js/game-logic.js');
+const gameLogicCode = readFileSync(gameLogicPath, 'utf8');
 const testsCode = readFileSync(join(__dirname, 'game-logic.test.js'), 'utf8');
 const klask4TestsCode = readFileSync(join(__dirname, 'klask-4.test.js'), 'utf8');
 
 try {
-    vm.runInThisContext(gameLogicCode, { filename: join(__dirname, '../js/game-logic.js') });
+    vm.runInThisContext(gameLogicCode, { filename: gameLogicPath });
     vm.runInThisContext(testsCode, { filename: join(__dirname, 'game-logic.test.js') });
     vm.runInThisContext(klask4TestsCode, { filename: join(__dirname, 'klask-4.test.js') });
     const success = vm.runInThisContext('runTests()', { filename: join(__dirname, 'runner-eval.js') });

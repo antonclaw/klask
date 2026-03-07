@@ -21,16 +21,16 @@ jobs:
           cache: 'npm'
           cache-dependency-path: |
             package-lock.json
-            frontend/klask-4/package-lock.json
+            frontend/klask/package-lock.json
 
       - name: Install root dependencies
         run: npm ci
 
-      - name: Install Klask-4 frontend dependencies
-        run: npm --prefix frontend/klask-4 ci
+      - name: Install Klask frontend dependencies
+        run: npm --prefix frontend/klask ci
 
-      - name: Build Klask-4 frontend
-        run: npm --prefix frontend/klask-4 run build
+      - name: Build Klask frontend
+        run: npm --prefix frontend/klask run build
 
       - name: Run logic tests with coverage
         run: npm run test:coverage

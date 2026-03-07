@@ -1,9 +1,9 @@
 # Klask
 
-This repository now contains two frontend experiences backed by one API service:
+This repository now contains one frontend Vite project with two pages:
 
-- `frontend/` : original Klask page
-- `frontend/klask-4/` : Klask-4 React source project (Vite)
+- `frontend/klask/index.html` -> Klask
+- `frontend/klask/klask-4.html` -> Klask-4
 
 ## State Storage
 
@@ -59,22 +59,22 @@ Server URL:
 node api/server.js
 ```
 
-### Klask-4 frontend (source-based)
+### Klask frontend (source-based)
 
 ```bash
-npm --prefix frontend/klask-4 ci
-npm --prefix frontend/klask-4 run dev
+npm --prefix frontend/klask ci
+npm --prefix frontend/klask run dev
 ```
 
 For production build artifacts:
 
 ```bash
-npm --prefix frontend/klask-4 run build
+npm --prefix frontend/klask run build
 ```
 
-## Validate Klask-4 Locally
+## Validate Locally
 
-Use this sequence to verify Klask-4 end-to-end.
+Use this sequence to verify both pages end-to-end.
 
 1. Start backend API in local mode.
 
@@ -83,26 +83,27 @@ npm ci
 node api/server.js
 ```
 
-2. Build Klask-4 assets.
+2. Build frontend assets.
 
 ```bash
-npm --prefix frontend/klask-4 ci
-npm --prefix frontend/klask-4 run build
+npm --prefix frontend/klask ci
+npm --prefix frontend/klask run build
 ```
 
-3. Validate static flow (same style as `frontend/index.html` via IDE static server).
+3. Validate static flow (IDE static server).
 
-- Open `http://localhost:63342/klask/frontend/klask-4/index.html`
-- It should redirect to `frontend/klask-4/dist/index.html` and render the app.
+- Open `http://localhost:63342/klask/frontend/index.html` (launcher to Klask).
+- Validate Klask renders and button switches to Klask-4.
+- Open `http://localhost:63342/klask/frontend/klask/dist/klask-4.html` directly if needed.
 
 4. Validate source/dev flow.
 
 ```bash
-npm --prefix frontend/klask-4 run dev
+npm --prefix frontend/klask run dev
 ```
 
-- Open `http://localhost:5173`
-- Confirm login works and data persists through `/api/klask4/state`.
+- Open `http://localhost:5173` for Klask and `http://localhost:5173/klask-4.html` for Klask-4.
+- Confirm data persists through `/api/state` and `/api/klask4/state`.
 
 5. Run tests/coverage.
 
@@ -118,12 +119,13 @@ npm test
 npm run test:coverage
 ```
 
-Coverage is enforced at 100% for `frontend/js/game-logic.js`.
+Coverage is enforced at 100% for `frontend/klask/public/legacy/js/game-logic.js`.
 
 ## Deploy Routing
 
 `vercel.json` routes:
 
 - `/api/*` -> `api/index.js`
-- `/klask-4` and `/klask-4/*` -> `frontend/klask-4/dist/*`
-- everything else -> `frontend/*`
+- `/` -> `frontend/klask/dist/index.html`
+- `/assets/*` -> `frontend/klask/dist/assets/*`
+- `/klask-4` -> `frontend/klask/dist/klask-4.html`

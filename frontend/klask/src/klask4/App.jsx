@@ -156,16 +156,33 @@ export default function App() {
     await persist(players, newGames, null, 'Complete game');
   }
 
+  function getMainAppHref() {
+    const path = window.location.pathname;
+    if (path.includes('/frontend/klask/dist/')) {
+      return './index.html';
+    }
+    if (path.endsWith('/klask-4.html')) {
+      return './index.html';
+    }
+    return '/';
+  }
+
   if (screen === 'loading') {
     return <div className="loading-screen"><div className="loading-text">Loading...</div></div>;
   }
 
   if (screen === 'login') {
-    return <LoginScreen onLogin={handleLogin} />;
+    return (
+      <>
+        <a className="switch-app-btn switch-app-btn-top-left" href={getMainAppHref()}>Klask</a>
+        <LoginScreen onLogin={handleLogin} />
+      </>
+    );
   }
 
   return (
     <div className="app-container">
+      <a className="switch-app-btn switch-app-btn-top-left" href={getMainAppHref()}>Klask</a>
       {saving && <div className="saving-indicator">Saving...</div>}
       {error && (
         <div className="error-banner">
