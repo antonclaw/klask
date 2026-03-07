@@ -668,6 +668,12 @@ h3 {
   margin: 6px 0 8px;
 }
 
+.matchup .score-row {
+  max-width: calc(34px * 6 + 6px * 5);
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .score-circle {
   width: 34px;
   height: 34px;
