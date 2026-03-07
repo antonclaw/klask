@@ -116,24 +116,25 @@ body {
 .solo-score-grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 20px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .solo-score-row {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid var(--color-white-30);
   border-radius: var(--border-radius-base);
-  padding: 12px;
+  padding: 8px 10px;
 }
 
 .solo-player-name {
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  font-size: 14px;
 }
 
 .solo-live-stats {
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
 /* ===== LOADING ===== */
@@ -608,6 +609,14 @@ h3 {
   text-align: center;
 }
 
+.round-screen h2 {
+  margin: 0 0 8px;
+}
+
+.round-screen .setup-hint {
+  margin: 0 0 8px;
+}
+
 .matchup {
   margin: 24px 0;
 }
@@ -649,23 +658,24 @@ h3 {
 
 .score-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
+  margin: 6px 0 8px;
 }
 
 .score-circle {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--color-white-95);
-  border: 3px solid var(--color-gray-200);
+  border: 2px solid var(--color-gray-200);
   box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 13px;
   color: var(--color-gray-700);
   cursor: pointer;
   user-select: none;
