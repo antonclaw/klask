@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import {
+  calculateProjectedTotals,
+  calculateSoloPlayerStats,
   calculateTotals,
   createSoloGame,
   createSoloModeState,
@@ -72,6 +74,58 @@ function testCalculateTotals() {
   assert.equal(totals.get(4), 9);
 }
 
+function testCalculateProjectedTotalsWithFullDraft() {
+  const game = createSoloGame([1, 2, 3, 4]);
+  game.rounds[0] = { scores: { 1: 1, 2: 2, 3: 3, 4: 4 } };
+  game.currentRound = 1;
+
+  const totals = calculateProjectedTotals(game, { 1: 0, 2: 1, 3: 2, 4: 3 });
+  assert.equal(totals.get(1), 1);
+  assert.equal(totals.get(2), 3);
+  assert.equal(totals.get(3), 5);
+  assert.equal(totals.get(4), 7);
+}
+
+function testCalculateProjectedTotalsWithoutFullDraft() {
+  const game = createSoloGame([1, 2, 3, 4]);
+  game.rounds[0] = { scores: { 1: 1, 2: 2, 3: 3, 4: 4 } };
+  game.currentRound = 1;
+
+  const totals = calculateProjectedTotals(game, { 1: 0, 2: 1, 3: 2 });
+  assert.equal(totals.get(1), 1);
+  assert.equal(totals.get(2), 2);
+  assert.equal(totals.get(3), 3);
+  assert.equal(totals.get(4), 4);
+}
+
+function testCalculateSoloPlayerStats() {
+  const players = [
+    { id: 1, name: 'Alice' },
+    { id: 2, name: 'Bob' },
+    { id: 3, name: 'Cara' },
+    { id: 4, name: 'Dan' },
+  ];
+
+  const game = createSoloGame([1, 2, 3, 4]);
+  game.rounds = [
+    { scores: { 1: 1, 2: 2, 3: 3, 4: 4 } },
+    { scores: { 1: 1, 2: 1, 3: 1, 4: 1 } },
+    { scores: { 1: 0, 2: 2, 3: 2, 4: 2 } },
+  ];
+
+  const stats = calculateSoloPlayerStats(players, [game]);
+  const alice = stats.find((s) => s.playerId === 1);
+  const bob = stats.find((s) => s.playerId === 2);
+
+  assert.equal(alice.wins, 1);
+  assert.equal(alice.totalPoints, 2);
+  assert.equal(alice.avgPoints, 2);
+  assert.equal(alice.bestGamePoints, 2);
+
+  assert.equal(bob.gamesPlayed, 1);
+  assert.equal(bob.totalPoints, 5);
+}
+
 function run() {
   const tests = [
     testCreateSoloModeStateDefaults,
@@ -82,6 +136,9 @@ function run() {
     testSubmitSoloRoundValidatesRangeAndType,
     testSubmitSoloRoundRejectedWhenCompleted,
     testCalculateTotals,
+    testCalculateProjectedTotalsWithFullDraft,
+    testCalculateProjectedTotalsWithoutFullDraft,
+    testCalculateSoloPlayerStats,
   ];
 
   let passed = 0;

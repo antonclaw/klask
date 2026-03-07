@@ -2,7 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { addPlayer, buildStateForSave, loadStateFromData } from './game-logic.js';
 import { clearToken, hasToken, loadState, login, saveState } from './api.js';
 import LoginScreen from './components/LoginScreen.jsx';
+import PlayerRoster from './components/PlayerRoster.jsx';
+import GameSetup from './components/GameSetup.jsx';
 import {
+  calculateProjectedTotals,
+  calculateSoloPlayerStats,
   calculateTotals,
   createSoloGame,
   createSoloModeState,
@@ -28,7 +32,6 @@ export default function SoloApp() {
   const [teamActiveGame, setTeamActiveGame] = useState(null);
   const [extraFields, setExtraFields] = useState({});
   const [soloMode, setSoloMode] = useState(createSoloModeState());
-  const [selectedPlayers, setSelectedPlayers] = useState(new Set());
   const [draftScores, setDraftScores] = useState({});
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -110,28 +113,20 @@ export default function SoloApp() {
   }
 
   function handleStartSetup() {
-    const initial = soloMode.activeGame?.playerIds || players.slice(0, 4).map((p) => p.id);
-    setSelectedPlayers(new Set(initial));
+    if (soloMode.activeGame && !soloMode.activeGame.completed) {
+      if (!window.confirm('There is an active game in progress. Abandon it and start a new one?')) {
+        return;
+      }
+    }
     setScreen('setup');
   }
 
-  async function handleStartGame() {
-    const ids = [...selectedPlayers];
-    const newActive = createSoloGame(ids);
+  async function handleStartGame(playerIds) {
+    const newActive = createSoloGame(playerIds);
     const nextSoloMode = { ...soloMode, activeGame: newActive };
     setDraftScores({});
     await persist(players, nextSoloMode, 'Start new solo game');
     setScreen('round');
-  }
-
-  function togglePlayer(id) {
-    const next = new Set(selectedPlayers);
-    if (next.has(id)) {
-      next.delete(id);
-    } else if (next.size < 4) {
-      next.add(id);
-    }
-    setSelectedPlayers(next);
   }
 
   function setScore(playerId, value) {
@@ -158,6 +153,14 @@ export default function SoloApp() {
     setScreen(updated.completed ? 'summary' : 'round');
   }
 
+  async function cancelSoloGame() {
+    if (!window.confirm('Cancel the current game?')) return;
+    const nextSoloMode = { ...soloMode, activeGame: null };
+    setDraftScores({});
+    await persist(players, nextSoloMode, 'Cancel solo game');
+    setScreen('main');
+  }
+
   async function finishGame() {
     const active = soloMode.activeGame;
     if (!active) return;
@@ -180,6 +183,14 @@ export default function SoloApp() {
   const playerMap = useMemo(() => new Map(players.map((p) => [p.id, p.name])), [players]);
   const activeGame = soloMode.activeGame;
   const totals = activeGame ? calculateTotals(activeGame) : new Map();
+  const projectedTotals = activeGame ? calculateProjectedTotals(activeGame, draftScores) : new Map();
+  const hasFullDraft = activeGame ? activeGame.playerIds.every((id) => Number.isInteger(draftScores[id])) : false;
+  const liveRanking = activeGame
+    ? activeGame.playerIds
+      .map((id) => ({ id, name: playerMap.get(id) || `#${id}`, points: (hasFullDraft ? projectedTotals : totals).get(id) || 0 }))
+      .sort((a, b) => a.points - b.points)
+    : [];
+  const playerStats = useMemo(() => calculateSoloPlayerStats(players, soloMode.games), [players, soloMode.games]);
 
   if (screen === 'loading') {
     return <div className="loading-screen"><div className="loading-text">Loading...</div></div>;
@@ -215,27 +226,47 @@ export default function SoloApp() {
             <button className="btn-logout" onClick={handleLogout}>Logout</button>
           </div>
 
-          <section>
-            <div className="section-header">
-              <h2>Players ({players.length})</h2>
-            </div>
-            <div className="add-player-form" style={{ display: 'flex', gap: 8 }}>
-              <input id="soloPlayerName" type="text" placeholder="Player name" />
-              <button onClick={() => {
-                const input = document.getElementById('soloPlayerName');
-                const value = input.value.trim();
-                if (!value) return;
-                handleAddPlayer(value);
-                input.value = '';
-              }}>Add</button>
-            </div>
-            <div className="player-chips">
-              {players.map((p) => <span className="player-chip" key={p.id}>{p.name}</span>)}
-            </div>
-          </section>
+          <PlayerRoster players={players} onAddPlayer={handleAddPlayer} />
+
+          <div className="start-game-section">
+            <button className="btn-start-game" disabled={players.length < 4} onClick={handleStartSetup}>Start Solo Game</button>
+            {players.length < 4 && (
+              <p className="hint-text">Add at least 4 players to start a game</p>
+            )}
+          </div>
 
           <section>
-            <button className="btn-start-game" disabled={players.length < 4} onClick={handleStartSetup}>Start Solo Game</button>
+            <h2>Solo Player Stats</h2>
+            {soloMode.games.length === 0 ? (
+              <p className="empty-text">No completed solo games yet.</p>
+            ) : (
+              <div className="table-wrapper">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Player</th>
+                      <th>Games</th>
+                      <th>Wins</th>
+                      <th>Avg Pts</th>
+                      <th>Best</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {playerStats.map((row, idx) => (
+                      <tr key={row.playerId}>
+                        <td>{idx + 1}</td>
+                        <td>{row.name}</td>
+                        <td>{row.gamesPlayed}</td>
+                        <td>{row.wins}</td>
+                        <td>{row.avgPoints ?? '—'}</td>
+                        <td>{row.bestGamePoints ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
 
           <section>
@@ -269,19 +300,7 @@ export default function SoloApp() {
       )}
 
       {screen === 'setup' && (
-        <div className="game-setup">
-          <h2>Select 4 Players</h2>
-          <p className="setup-hint">{selectedPlayers.size}/4 selected</p>
-          <div className="toggle-grid">
-            {players.map((p) => (
-              <button key={p.id} className={`toggle-btn${selectedPlayers.has(p.id) ? ' active' : ''}`} onClick={() => togglePlayer(p.id)}>{p.name}</button>
-            ))}
-          </div>
-          <div className="button-row">
-            <button className="btn-secondary" onClick={() => setScreen('main')}>Cancel</button>
-            <button disabled={selectedPlayers.size !== 4} onClick={handleStartGame}>Start</button>
-          </div>
-        </div>
+        <GameSetup players={players} onStartGame={handleStartGame} onCancel={() => setScreen('main')} />
       )}
 
       {screen === 'round' && activeGame && (
@@ -309,12 +328,48 @@ export default function SoloApp() {
           </div>
 
           <button className="btn-submit" onClick={submitRound}>Submit Round</button>
+          <button onClick={cancelSoloGame} className="btn-cancel">Cancel Game</button>
+
+          <div className="solo-live-stats">
+            <h3>Current Standings {hasFullDraft ? '(with selected round)' : '(submitted rounds only)'}</h3>
+            <div className="table-wrapper">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Player</th>
+                    <th>Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {liveRanking.map((row, idx) => (
+                    <tr key={row.id}>
+                      <td>{idx + 1}</td>
+                      <td>{row.name}</td>
+                      <td>{row.points}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
       {screen === 'summary' && activeGame && (
         <div className="game-end">
-          <h2>Solo Game Summary</h2>
+          <h2>Game Complete!</h2>
+          <div className="trophy-section">
+            <div className="trophy">&#127942;</div>
+            <div className="winner-names">
+              {activeGame.playerIds
+                .map((id) => ({ id, name: playerMap.get(id) || `#${id}`, points: totals.get(id) || 0 }))
+                .sort((a, b) => a.points - b.points)[0]?.name}
+            </div>
+            <div className="winner-subtitle">Least points wins</div>
+          </div>
+
+          <h3>Final Standings</h3>
           <div className="final-standings">
             {activeGame.playerIds
               .map((id) => ({ id, name: playerMap.get(id) || `#${id}`, points: totals.get(id) || 0 }))

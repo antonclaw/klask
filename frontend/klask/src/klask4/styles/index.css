@@ -130,6 +130,10 @@ body {
   margin-bottom: 8px;
 }
 
+.solo-live-stats {
+  margin-top: 20px;
+}
+
 /* ===== LOADING ===== */
 
 .loading-screen {
