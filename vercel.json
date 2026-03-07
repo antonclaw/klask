@@ -2,40 +2,19 @@
   "version": 2,
   "installCommand": "npm ci && npm --prefix frontend/klask ci",
   "buildCommand": "npm --prefix frontend/klask run build",
-  "builds": [
+  "outputDirectory": "frontend/klask/dist",
+  "rewrites": [
     {
-      "src": "api/index.js",
-      "use": "@vercel/node"
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
     },
     {
-      "src": "frontend/**/*",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
+      "source": "/klask-4",
+      "destination": "/klask-4.html"
     },
     {
-      "src": "/",
-      "dest": "/frontend/klask/dist/index.html"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/frontend/klask/dist/assets/$1"
-    },
-    {
-      "src": "/klask-4",
-      "dest": "/frontend/klask/dist/klask-4.html"
-    },
-    {
-      "src": "/klask-4/",
-      "dest": "/frontend/klask/dist/klask-4.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "source": "/klask-4/",
+      "destination": "/klask-4.html"
     }
   ]
 }
