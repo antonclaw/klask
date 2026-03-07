@@ -348,9 +348,7 @@ function calculateHeadToHead(playerId) {
             name: s.name,
             gamesAgainst: s.gamesAgainst,
             winBalance: s.wins - s.losses,
-            avgPointDiff: s.gamesAgainst > 0
-                ? ((s.pointsFor - s.pointsAgainst) / s.gamesAgainst).toFixed(1)
-                : 0
+            avgPointDiff: ((s.pointsFor - s.pointsAgainst) / s.gamesAgainst).toFixed(1)
         }))
         .sort((a, b) => b.gamesAgainst - a.gamesAgainst);
 }

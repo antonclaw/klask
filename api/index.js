@@ -81,23 +81,63 @@ function auth(req, res, next) {
 
 // ===== Storage (GitHub or Local) =====
 let readState, writeState;
+let readStateKlask4, writeStateKlask4;
 
 if (LOCAL_MODE) {
     console.log('✅ Running in LOCAL_MODE (no GitHub auth required)');
     const localStore = await import('./localStore.js');
+    const localStoreKlask4 = await import('./localStoreKlask4.js');
     readState = localStore.readState;
     writeState = localStore.writeState;
+    readStateKlask4 = localStoreKlask4.readState;
+    writeStateKlask4 = localStoreKlask4.writeState;
 } else {
     console.log('✅ Running with GitHub storage');
-    const githubStore = await import('./githubStore.js');
-    readState = githubStore.readState;
-    writeState = githubStore.writeState;
+    const githubStoreFactory = await import('./githubStore.js');
 
     // Validate required environment variables for GitHub mode
     if (!process.env.GITHUB_TOKEN || !process.env.GITHUB_OWNER || !process.env.GITHUB_REPO || !process.env.GITHUB_PATH) {
         console.error('❌ GitHub environment variables not set: GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, GITHUB_PATH');
         process.exit(1);
     }
+
+    const mainStore = githubStoreFactory.createGithubStore(process.env.GITHUB_PATH);
+    const klask4Path = process.env.GITHUB_PATH_KLASK4 || 'klask-4-state.json';
+    const klask4Store = githubStoreFactory.createGithubStore(klask4Path);
+    readState = mainStore.readState;
+    writeState = mainStore.writeState;
+    readStateKlask4 = klask4Store.readState;
+    writeStateKlask4 = klask4Store.writeState;
+}
+
+function registerStateRoutes(basePath, readStateFn, writeStateFn, initialState, initializeCause = 'Initialize') {
+    app.get(basePath, async (req, res) => {
+        try {
+            const { data } = await readStateFn();
+
+            if (!data) {
+                await writeStateFn(initialState, null, initializeCause);
+                return res.json(initialState);
+            }
+
+            res.json(data);
+        } catch (err) {
+            console.error(`Failed to load state for ${basePath}`, err);
+            return res.status(500).send(err.message);
+        }
+    });
+
+    app.post(basePath, async (req, res) => {
+        try {
+            const { sha } = await readStateFn();
+            const { cause, ...state } = req.body;
+            await writeStateFn(state, sha, cause);
+            res.json({ ok: true });
+        } catch (err) {
+            console.error(`Failed to save state for ${basePath}`, err);
+            return res.status(500).send(err.message);
+        }
+    });
 }
 
 // ===== Routes =====
@@ -117,41 +157,34 @@ app.post('/api/login', (req, res) => {
 });
 
 app.use(auth);
-app.get('/api/state', async (req, res) => {
-    try {
-        const { data, sha } = await readState();
-
-        if (!data) {
-            const initial = {
-                players: [],
-                championship: {
-                    championId: null,
-                    challengerId: null
-                }
-            };
-
-            await writeState(initial, null, 'Initialize');
-            return res.json(initial);
+registerStateRoutes(
+    '/api/state',
+    readState,
+    writeState,
+    {
+        players: [],
+        championship: {
+            championId: null,
+            challengerId: null
         }
-
-        res.json(data);
-    } catch (err) {
-        console.error('Failed to load state', err);
-        return res.status(500).send(err.message);
     }
-});
+);
 
-app.post('/api/state', async (req, res) => {
-    try {
-        const { sha } = await readState();
-        const { cause, ...state } = req.body;
-        await writeState(state, sha, cause);
-        res.json({ ok: true });
-    } catch (err) {
-        console.error('Failed to save state', err);
-        return res.status(500).send(err.message);
+registerStateRoutes(
+    '/api/klask4/state',
+    readStateKlask4,
+    writeStateKlask4,
+    {
+        players: [
+            { id: 1, name: 'Maks' },
+            { id: 2, name: 'Artem' },
+            { id: 3, name: 'Vlad' },
+            { id: 4, name: 'Dima' }
+        ],
+        games: [],
+        activeGame: null
     }
-});
+);
 
 // Export app as default
 export default app;

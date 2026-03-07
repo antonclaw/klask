@@ -51,6 +51,7 @@ function runTests() {
         testRemoveChampionshipEventFromHistory,
         testLoadStateFromData,
         testGetStateForSave,
+        ...(typeof getKlask4Tests === 'function' ? getKlask4Tests() : []),
         testCalculateHeadToHeadBasic,
         testCalculateHeadToHeadMultipleOpponents,
         testCalculateHeadToHeadNoGames,

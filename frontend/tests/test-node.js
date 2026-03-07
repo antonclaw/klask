@@ -2,25 +2,21 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import vm from 'vm';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load and run in a way that makes functions available globally
+// Load scripts and execute with explicit filenames so c8 can map coverage.
 const gameLogicCode = readFileSync(join(__dirname, '../js/game-logic.js'), 'utf8');
 const testsCode = readFileSync(join(__dirname, 'game-logic.test.js'), 'utf8');
+const klask4TestsCode = readFileSync(join(__dirname, 'klask-4.test.js'), 'utf8');
 
-// Combine and evaluate in global context - return the result of runTests()
-const combinedCode = `
-${gameLogicCode}
-${testsCode}
-return runTests();
-`;
-
-// Use Function constructor to run in global scope
-const testRunner = new Function(combinedCode);
 try {
-    const success = testRunner();
+    vm.runInThisContext(gameLogicCode, { filename: join(__dirname, '../js/game-logic.js') });
+    vm.runInThisContext(testsCode, { filename: join(__dirname, 'game-logic.test.js') });
+    vm.runInThisContext(klask4TestsCode, { filename: join(__dirname, 'klask-4.test.js') });
+    const success = vm.runInThisContext('runTests()', { filename: join(__dirname, 'runner-eval.js') });
     process.exit(success ? 0 : 1);
 } catch (error) {
     console.error('Test execution failed:', error);
