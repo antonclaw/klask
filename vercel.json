@@ -15,6 +15,14 @@
     {
       "source": "/klask-4/",
       "destination": "/klask-4.html"
+    },
+    {
+      "source": "/klask-4-solo",
+      "destination": "/klask-4-solo.html"
+    },
+    {
+      "source": "/klask-4-solo/",
+      "destination": "/klask-4-solo.html"
     }
   ]
 }

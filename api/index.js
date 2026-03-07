@@ -182,7 +182,11 @@ registerStateRoutes(
             { id: 4, name: 'Dima' }
         ],
         games: [],
-        activeGame: null
+        activeGame: null,
+        soloMode: {
+            games: [],
+            activeGame: null
+        }
     }
 );
 

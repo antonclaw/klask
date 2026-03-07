@@ -106,6 +106,30 @@ body {
   left: 16px;
 }
 
+.switch-app-btn-top-right {
+  top: 16px;
+  right: 16px;
+}
+
+.solo-score-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.solo-score-row {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--color-white-30);
+  border-radius: var(--border-radius-base);
+  padding: 12px;
+}
+
+.solo-player-name {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
 /* ===== LOADING ===== */
 
 .loading-screen {

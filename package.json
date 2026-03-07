@@ -4,7 +4,7 @@
   "private": true,
   "main": "server.js",
   "scripts": {
-    "test": "node frontend/tests/test-node.js",
+    "test": "node frontend/tests/test-node.js && node frontend/klask/src/klask4/solo-logic.test.js",
     "test:coverage": "c8 --reporter=text --reporter=lcov --check-coverage --include=frontend/klask/public/legacy/js/game-logic.js --branches 100 --functions 100 --lines 100 --statements 100 node frontend/tests/test-node.js"
   },
   "dependencies": {

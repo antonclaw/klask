@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         klask4: resolve(__dirname, 'klask-4.html'),
+        klask4solo: resolve(__dirname, 'klask-4-solo.html'),
       },
     },
   },

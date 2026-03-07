@@ -4,6 +4,7 @@ This repository now contains one frontend Vite project with two pages:
 
 - `frontend/klask/index.html` -> Klask
 - `frontend/klask/klask-4.html` -> Klask-4
+- `frontend/klask/klask-4-solo.html` -> Klask-4 Solo Mode
 
 ## State Storage
 
@@ -11,6 +12,10 @@ The backend exposes separate state endpoints:
 
 - `GET/POST /api/state` (main Klask state)
 - `GET/POST /api/klask4/state` (Klask-4 state)
+
+Klask-4 solo mode is stored in the same klask-4 state object under a separate field:
+
+- `soloMode` (contains solo `games` and `activeGame`)
 
 Local mode state files:
 
@@ -97,6 +102,7 @@ npm --prefix frontend/klask run dev
 ```
 
 - Open `http://localhost:5173` for Klask and `http://localhost:5173/klask-4.html` for Klask-4.
+- Open `http://localhost:5173/klask-4-solo.html` for Klask-4 Solo Mode.
 - Confirm data persists through `/api/state` and `/api/klask4/state`.
 
 5. Run tests/coverage.
@@ -115,3 +121,4 @@ Coverage is enforced at 100% for `frontend/klask/public/legacy/js/game-logic.js`
 - `/api/*` -> `api/index.js`
 - `/` -> `index.html` from `frontend/klask/dist`
 - `/klask-4` and `/klask-4/` -> `klask-4.html` from `frontend/klask/dist`
+- `/klask-4-solo` and `/klask-4-solo/` -> `klask-4-solo.html` from `frontend/klask/dist`

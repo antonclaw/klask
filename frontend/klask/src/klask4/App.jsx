@@ -23,11 +23,12 @@ export default function App() {
   const [lastRoundIndex, setLastRoundIndex] = useState(null);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [extraFields, setExtraFields] = useState({});
 
   const persist = useCallback(async (newPlayers, newGames, newActiveGame, cause) => {
     setSaving(true);
     try {
-      const state = buildStateForSave(newPlayers, newGames, newActiveGame);
+      const state = buildStateForSave(newPlayers, newGames, newActiveGame, extraFields);
       await saveState(state, cause);
     } catch (err) {
       setError(err.message);
@@ -37,7 +38,7 @@ export default function App() {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [extraFields]);
 
   // Load state on mount
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function App() {
         setPlayers(state.players);
         setGames(state.games);
         setActiveGame(state.activeGame);
+        setExtraFields(state.extraFields || {});
 
         if (state.activeGame && !state.activeGame.completed) {
           setScreen('round');
@@ -76,6 +78,7 @@ export default function App() {
     setPlayers(state.players);
     setGames(state.games);
     setActiveGame(state.activeGame);
+    setExtraFields(state.extraFields || {});
 
     if (state.activeGame && !state.activeGame.completed) {
       setScreen('round');
@@ -167,6 +170,17 @@ export default function App() {
     return '/?from=klask4';
   }
 
+  function getSoloModeHref() {
+    const path = window.location.pathname;
+    if (path.includes('/frontend/klask/dist/')) {
+      return './klask-4-solo.html';
+    }
+    if (path.endsWith('/klask-4.html')) {
+      return './klask-4-solo.html';
+    }
+    return '/klask-4-solo';
+  }
+
   if (screen === 'loading') {
     return <div className="loading-screen"><div className="loading-text">Loading...</div></div>;
   }
@@ -175,6 +189,7 @@ export default function App() {
     return (
       <>
         <a className="switch-app-btn switch-app-btn-top-left" href={getMainAppHref()}>Klask</a>
+        <a className="switch-app-btn switch-app-btn-top-right" href={getSoloModeHref()}>Solo Mode</a>
         <LoginScreen onLogin={handleLogin} />
       </>
     );
@@ -183,6 +198,7 @@ export default function App() {
   return (
     <div className="app-container">
       <a className="switch-app-btn switch-app-btn-top-left" href={getMainAppHref()}>Klask</a>
+      <a className="switch-app-btn switch-app-btn-top-right" href={getSoloModeHref()}>Solo Mode</a>
       {saving && <div className="saving-indicator">Saving...</div>}
       {error && (
         <div className="error-banner">

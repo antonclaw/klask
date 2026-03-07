@@ -227,8 +227,9 @@ export function addPlayer(players, name) {
 /**
  * Serialize state for API save.
  */
-export function buildStateForSave(players, games, activeGame) {
+export function buildStateForSave(players, games, activeGame, extraFields = {}) {
   return {
+    ...extraFields,
     players,
     games,
     activeGame: activeGame || null,
@@ -239,9 +240,17 @@ export function buildStateForSave(players, games, activeGame) {
  * Deserialize state from API response.
  */
 export function loadStateFromData(data) {
+  const {
+    players = [],
+    games = [],
+    activeGame = null,
+    ...extraFields
+  } = data || {};
+
   return {
-    players: data.players || [],
-    games: data.games || [],
-    activeGame: data.activeGame || null,
+    players,
+    games,
+    activeGame,
+    extraFields,
   };
 }
