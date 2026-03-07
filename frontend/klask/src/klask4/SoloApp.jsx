@@ -174,7 +174,7 @@ export default function SoloApp() {
     <AppShell
       rightMode="team"
       rightLabel="Team Mode"
-      showModeSwitch={screen !== 'setup'}
+      showModeSwitch={screen === 'main'}
       saving={saving}
       error={error}
       onDismissError={() => setError(null)}

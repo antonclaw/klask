@@ -134,7 +134,7 @@ export default function App() {
     <AppShell
       rightMode="solo"
       rightLabel="Solo Mode"
-      showModeSwitch={screen !== 'setup'}
+      showModeSwitch={screen === 'main'}
       saving={saving}
       error={error}
       onDismissError={() => setError(null)}
