@@ -5,10 +5,7 @@
 const players = [];
 const championship = {
     championId: null,
-    challengerId: null,
-    winsInRow: 0,
-    lastWinDate: null,
-    lostToChampionToday: new Set() // Track players who lost to champion today
+    candidate: null // { playerId, remainingGames }
 };
 const games = [];
 const championshipHistory = [];
@@ -79,6 +76,64 @@ function championChangedToday(today) {
 
 }
 
+function countTodayGamesBetween(playerAId, playerBId, today) {
+    let count = 0;
+    for (let i = games.length - 1; i >= 0; i--) {
+        const g = games[i];
+        const gDate = new Date(g.date).toDateString();
+        if (gDate !== today) break;
+
+        const hasA = g.player1Id === playerAId || g.player2Id === playerAId;
+        const hasB = g.player1Id === playerBId || g.player2Id === playerBId;
+        if (hasA && hasB) count++;
+    }
+    return count;
+}
+
+function tryConvertCandidateOnChampionWin(winnerId, previousChampionId, now, championAlreadyChangedToday) {
+    if (!championship.candidate || championship.candidate.playerId !== winnerId) return false;
+    if (championAlreadyChangedToday) return false;
+
+    championshipHistory.push({
+        date: now,
+        newChampionId: winnerId,
+        previousChampionId,
+        reason: 'game'
+    });
+
+    championship.championId = winnerId;
+    championship.candidate = null;
+    return true;
+}
+
+function maybeStartCandidateWindow(winnerId, championId, today) {
+    if (championship.candidate) return false;
+
+    const gamesVsChampionToday = countTodayGamesBetween(winnerId, championId, today);
+    const gamesVsChampionBeforeThis = Math.max(0, gamesVsChampionToday - 1);
+    if (gamesVsChampionBeforeThis !== 0) return false;
+
+    championship.candidate = {
+        playerId: winnerId,
+        remainingGames: 2
+    };
+    return true;
+}
+
+function consumeCandidateWindowIfNeeded(p1Id, p2Id, candidateAtStartId, candidateStartedThisGame, championChanged) {
+    if (championChanged || !candidateAtStartId || candidateStartedThisGame) return;
+    if (!championship.candidate || championship.candidate.playerId !== candidateAtStartId) return;
+
+    const candidatePlayed = p1Id === candidateAtStartId || p2Id === candidateAtStartId;
+    const gameVsChampion = p1Id === championship.championId || p2Id === championship.championId;
+    if (!candidatePlayed || !gameVsChampion) return;
+
+    championship.candidate.remainingGames -= 1;
+    if (championship.candidate.remainingGames <= 0) {
+        championship.candidate = null;
+    }
+}
+
 function processMatchResult(p1Id, p2Id, score1, score2) {
     const winnerId = score1 > score2 ? p1Id : p2Id;
     const loserId = score1 > score2 ? p2Id : p1Id;
@@ -87,65 +142,35 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
     const today = currentDate.toDateString();
     const now = currentDate.toISOString();
 
-    // Clear "lost today" set if it's a new day
-    if (championship.lastWinDate && championship.lastWinDate !== today) {
-        championship.lostToChampionToday.clear();
+    const candidateAtStartId = championship.candidate ? championship.candidate.playerId : null;
+
+    const previousGameDay = games.length ? new Date(games[games.length - 1].date).toDateString() : null;
+    if (previousGameDay && previousGameDay !== today) {
+        championship.candidate = null;
     }
 
-    // Save game to history
     games.push({
         date: now,
         player1Id: p1Id,
         player2Id: p2Id,
-        score1: score1,
-        score2: score2
+        score1,
+        score2
     });
 
-    // Championship logic
+    const championAlreadyChangedToday = championChangedToday(today);
     let championChanged = false;
+    let candidateStartedThisGame = false;
 
     if (!championship.championId) {
         championship.championId = winnerId;
     } else if (championship.championId === loserId) {
-        // Champion lost
-        const isSameDay = championship.lastWinDate === today;
-
-        if (championship.challengerId === winnerId && isSameDay) {
-            championship.winsInRow++;
-        } else {
-            championship.challengerId = winnerId;
-            championship.winsInRow = 1;
-            championship.lastWinDate = today;
+        championChanged = tryConvertCandidateOnChampionWin(winnerId, loserId, now, championAlreadyChangedToday);
+        if (!championChanged) {
+            candidateStartedThisGame = maybeStartCandidateWindow(winnerId, loserId, today);
         }
-
-        // Can only become champion if:
-        // 1. Won 2 games in a row
-        // 2. No championship change happened today already
-        // 3. Didn't lose to the champion earlier today
-        if (championship.winsInRow >= 2 &&
-            !championChangedToday(today) && 
-            !championship.lostToChampionToday.has(winnerId)) {
-            championshipHistory.push({
-                date: now,
-                newChampionId: winnerId,
-                previousChampionId: loserId,
-                reason: 'game'
-            });
-
-            championship.championId = winnerId;
-            championship.challengerId = null;
-            championship.winsInRow = 0;
-            championship.lastWinDate = null;
-            championship.lostToChampionToday.clear();
-            championChanged = true;
-        }
-    } else if (championship.championId === winnerId) {
-        // Champion won - track that loser lost to champion today
-        championship.lostToChampionToday.add(loserId);
-        championship.challengerId = null;
-        championship.winsInRow = 0;
-        championship.lastWinDate = null;
     }
+
+    consumeCandidateWindowIfNeeded(p1Id, p2Id, candidateAtStartId, candidateStartedThisGame, championChanged);
 
     return {championChanged};
 }
@@ -161,10 +186,7 @@ function setChampion(newChampionId) {
     }
 
     championship.championId = newChampionId;
-    championship.challengerId = null;
-    championship.winsInRow = 0;
-    championship.lastWinDate = null;
-    championship.lostToChampionToday.clear();
+    championship.candidate = null;
 }
 
 function removeGameFromHistory(index) {
@@ -248,12 +270,9 @@ function loadStateFromData(data) {
     players.push(...data.players);
 
     championship.championId = data.championship.championId;
-    championship.challengerId = data.championship.challengerId;
-    championship.winsInRow = data.championship.winsInRow;
-    championship.lastWinDate = data.championship.lastWinDate;
-    const lostToday = data.championship.lostToChampionToday;
-    championship.lostToChampionToday = new Set(Array.isArray(lostToday) ? lostToday : Object.keys(lostToday || {}));
-
+    championship.candidate = data.championship.candidate || (data.championship.challengerId
+        ? { playerId: data.championship.challengerId, remainingGames: 2 }
+        : null);
     games.length = 0;
     if (data.games) {
         games.push(...data.games);
@@ -269,8 +288,7 @@ function getStateForSave() {
     return {
         players,
         championship: {
-            ...championship,
-            lostToChampionToday: Array.from(championship.lostToChampionToday)
+            ...championship
         },
         games,
         championshipHistory
