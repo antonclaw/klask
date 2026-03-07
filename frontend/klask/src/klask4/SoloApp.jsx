@@ -298,7 +298,9 @@ export default function SoloApp() {
             ))}
           </div>
 
-          <button className="btn-submit" onClick={submitRound}>Submit Round</button>
+          <button className="btn-submit" onClick={submitRound} disabled={!hasFullDraft}>
+            Submit Round
+          </button>
           <button onClick={cancelSoloGame} className="btn-cancel">Cancel Game</button>
 
           <div className="solo-live-stats">
