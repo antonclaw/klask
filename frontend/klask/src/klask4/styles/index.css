@@ -959,6 +959,10 @@ h3 {
   font-size: 14px;
 }
 
+.history-winner {
+  margin-left: 12px;
+}
+
 .history-players {
   font-size: 13px;
   opacity: 0.7;

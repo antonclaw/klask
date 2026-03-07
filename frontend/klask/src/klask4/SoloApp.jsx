@@ -246,12 +246,14 @@ export default function SoloApp() {
                   const ranking = game.playerIds
                     .map((id) => ({ id, name: playerMap.get(id) || `#${id}`, points: gameTotals.get(id) || 0 }))
                     .sort((a, b) => a.points - b.points);
+                  const bestPoints = ranking[0]?.points;
+                  const winners = ranking.filter((row) => row.points === bestPoints).map((row) => row.name);
 
                   return (
                     <div className="history-item" key={idx}>
                       <div className="history-header">
                         <span className="history-date">{new Date(game.date).toLocaleString()}</span>
-                        <span>{ranking[0].name} won ({ranking[0].points} pts)</span>
+                        <span className="history-winner">{winners.join(', ')} won ({bestPoints} pts)</span>
                       </div>
                       <div className="history-rounds">
                         {ranking.map((r) => <div key={r.id}>{r.name}: {r.points}</div>)}
@@ -335,9 +337,13 @@ export default function SoloApp() {
           <div className="trophy-section">
             <div className="trophy">&#127942;</div>
             <div className="winner-names">
-              {currentSoloGame.playerIds
-                .map((id) => ({ id, name: playerMap.get(id) || `#${id}`, points: totals.get(id) || 0 }))
-                .sort((a, b) => a.points - b.points)[0]?.name}
+              {(() => {
+                const ranking = currentSoloGame.playerIds
+                  .map((id) => ({ id, name: playerMap.get(id) || `#${id}`, points: totals.get(id) || 0 }))
+                  .sort((a, b) => a.points - b.points);
+                const bestPoints = ranking[0]?.points;
+                return ranking.filter((row) => row.points === bestPoints).map((row) => row.name).join(', ');
+              })()}
             </div>
             <div className="winner-subtitle">Least points wins</div>
           </div>
