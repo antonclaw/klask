@@ -53,12 +53,6 @@ Server URL:
 
 - `http://localhost:3000`
 
-### Backend (quick command)
-
-```bash
-node api/server.js
-```
-
 ### Klask frontend (source-based)
 
 ```bash
@@ -112,13 +106,6 @@ npm test
 npm run test:coverage
 ```
 
-## Tests
-
-```bash
-npm test
-npm run test:coverage
-```
-
 Coverage is enforced at 100% for `frontend/klask/public/legacy/js/game-logic.js`.
 
 ## Deploy Routing
@@ -126,6 +113,5 @@ Coverage is enforced at 100% for `frontend/klask/public/legacy/js/game-logic.js`
 `vercel.json` routes:
 
 - `/api/*` -> `api/index.js`
-- `/` -> `frontend/klask/dist/index.html`
-- `/assets/*` -> `frontend/klask/dist/assets/*`
-- `/klask-4` -> `frontend/klask/dist/klask-4.html`
+- `/` -> `index.html` from `frontend/klask/dist`
+- `/klask-4` and `/klask-4/` -> `klask-4.html` from `frontend/klask/dist`
