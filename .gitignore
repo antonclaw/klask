@@ -1,7 +1,13 @@
 /.env
 /data.json
+/klask-4-state.json
+coverage
+.nyc_output
+*.log
 node_modules
 
 
 .idea
 .DS_Store
+
+/frontend/klask-4/dist/

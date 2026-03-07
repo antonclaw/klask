@@ -1,4 +1,7 @@
 const TOKEN_KEY = 'klask4_token';
+const API_URL = import.meta.env.VITE_API_URL || (
+  location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api'
+);
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -22,7 +25,7 @@ function authHeaders() {
 }
 
 export async function login(username, password) {
-  const res = await fetch('/api/login', {
+  const res = await fetch(`${API_URL}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
@@ -36,7 +39,7 @@ export async function login(username, password) {
 }
 
 export async function loadState() {
-  const res = await fetch('/api/klask4/state', {
+  const res = await fetch(`${API_URL}/klask4/state`, {
     headers: authHeaders(),
   });
   if (res.status === 401) {
@@ -50,7 +53,7 @@ export async function loadState() {
 }
 
 export async function saveState(state, cause) {
-  const res = await fetch('/api/klask4/state', {
+  const res = await fetch(`${API_URL}/klask4/state`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ ...state, cause }),
