@@ -1,20 +1,20 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { saveState } from './api.js';
 import { addPlayer, createGame, submitRoundScore, buildStateForSave } from './game-logic.js';
 import LoginScreen from './components/LoginScreen.jsx';
 import MainScreen from './components/MainScreen.jsx';
 import GameSetup from './components/GameSetup.jsx';
 import RoundScreen from './components/RoundScreen.jsx';
-import RoundResults from './components/RoundResults.jsx';
 import GameEnd from './components/GameEnd.jsx';
 import { AppShell, LoadingScreen, ModeSwitchButtons, useLegacyKlaskStyles } from './components/AppShared.jsx';
 import useKlask4Session from './hooks/useKlask4Session.js';
 
 function resolveTeamScreen(state) {
+  if (state.activeGame && state.activeGame.completed) return 'gameEnd';
   return state.activeGame && !state.activeGame.completed ? 'round' : 'main';
 }
 
-// Screens: loading, login, main, setup, round, roundResults, gameEnd
+// Screens: loading, login, main, setup, round, gameEnd
 export default function App() {
   useLegacyKlaskStyles();
 
@@ -35,8 +35,6 @@ export default function App() {
     handleLogin,
     handleLogout,
   } = useKlask4Session(resolveTeamScreen);
-
-  const [lastRoundIndex, setLastRoundIndex] = useState(null);
 
   const persist = useCallback(async (newPlayers, newGames, newActiveGame, cause) => {
     setSaving(true);
@@ -78,18 +76,15 @@ export default function App() {
   async function handleSubmitScore(score1, score2) {
     const updated = submitRoundScore(activeGame, score1, score2);
     const roundIdx = activeGame.currentRound;
-    setActiveGame(updated);
-    setLastRoundIndex(roundIdx);
-    setScreen(updated.completed ? 'gameEnd' : 'roundResults');
-    await persist(players, games, updated, `Submit round ${roundIdx + 1} score: ${score1}-${score2}`);
-  }
-
-  function handleNextRound() {
-    if (activeGame.completed) {
-      setScreen('gameEnd');
-    } else {
+    if (!updated.completed) {
+      setActiveGame(updated);
       setScreen('round');
+      await persist(players, games, updated, `Submit round ${roundIdx + 1} score: ${score1}-${score2}`);
+      return;
     }
+    setActiveGame(updated);
+    setScreen('gameEnd');
+    await persist(players, games, updated, `Submit round ${roundIdx + 1} score: ${score1}-${score2}`);
   }
 
   async function handleCancelGame() {
@@ -100,6 +95,7 @@ export default function App() {
   }
 
   async function handleFinishGame() {
+    if (!activeGame || !activeGame.completed) return;
     const completedGame = {
       date: new Date().toISOString(),
       playerIds: [...activeGame.playerIds],
@@ -163,15 +159,6 @@ export default function App() {
           players={players}
           onSubmitScore={handleSubmitScore}
           onCancel={handleCancelGame}
-        />
-      )}
-
-      {screen === 'roundResults' && activeGame && lastRoundIndex !== null && (
-        <RoundResults
-          game={activeGame}
-          players={players}
-          roundIndex={lastRoundIndex}
-          onNext={handleNextRound}
         />
       )}
 

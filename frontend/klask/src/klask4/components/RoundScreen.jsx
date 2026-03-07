@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { calculateGameResults } from '../game-logic.js';
 
 export default function RoundScreen({ game, players, onSubmitScore, onCancel }) {
   const [score1, setScore1] = useState(null);
@@ -31,6 +32,18 @@ export default function RoundScreen({ game, players, onSubmitScore, onCancel }) 
   }
 
   const canSubmit = score1 !== null && score2 !== null && score1 !== score2;
+  const results = calculateGameResults(game);
+  const standings = game.playerIds
+    .map((id) => {
+      const stats = results.get(id) || { roundsWon: 0, roundsPlayed: 0 };
+      return {
+        id,
+        name: playerMap[id] || `#${id}`,
+        roundsWon: stats.roundsWon,
+        roundsPlayed: stats.roundsPlayed,
+      };
+    })
+    .sort((a, b) => b.roundsWon - a.roundsWon || b.roundsPlayed - a.roundsPlayed || a.name.localeCompare(b.name));
 
   return (
     <div className="round-screen">
@@ -76,6 +89,35 @@ export default function RoundScreen({ game, players, onSubmitScore, onCancel }) 
         Submit Score
       </button>
       <button onClick={onCancel} className="btn-cancel">Cancel Game</button>
+
+      <div className="team-live-stats">
+        <h3>Current Standings</h3>
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>Won</th>
+                <th>Win %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {standings.map((row, idx) => {
+                const winPercent = row.roundsPlayed > 0 ? Math.round((row.roundsWon / row.roundsPlayed) * 100) : 0;
+                return (
+                  <tr key={row.id}>
+                    <td>{idx + 1}</td>
+                    <td>{row.name}</td>
+                    <td>{row.roundsWon}</td>
+                    <td>{winPercent}%</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
