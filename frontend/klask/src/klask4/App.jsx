@@ -1,30 +1,42 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { login, loadState, saveState, hasToken, clearToken } from './api.js';
-import {
-  createGame,
-  submitRoundScore,
-  addPlayer,
-  buildStateForSave,
-  loadStateFromData,
-} from './game-logic.js';
+import React, { useCallback, useState } from 'react';
+import { saveState } from './api.js';
+import { addPlayer, createGame, submitRoundScore, buildStateForSave } from './game-logic.js';
 import LoginScreen from './components/LoginScreen.jsx';
 import MainScreen from './components/MainScreen.jsx';
 import GameSetup from './components/GameSetup.jsx';
 import RoundScreen from './components/RoundScreen.jsx';
 import RoundResults from './components/RoundResults.jsx';
 import GameEnd from './components/GameEnd.jsx';
-import { LoadingScreen, ModeSwitchButtons } from './components/AppShared.jsx';
+import { AppShell, LoadingScreen, ModeSwitchButtons, useLegacyKlaskStyles } from './components/AppShared.jsx';
+import useKlask4Session from './hooks/useKlask4Session.js';
+
+function resolveTeamScreen(state) {
+  return state.activeGame && !state.activeGame.completed ? 'round' : 'main';
+}
 
 // Screens: loading, login, main, setup, round, roundResults, gameEnd
 export default function App() {
-  const [screen, setScreen] = useState('loading');
-  const [players, setPlayers] = useState([]);
-  const [games, setGames] = useState([]);
-  const [activeGame, setActiveGame] = useState(null);
+  useLegacyKlaskStyles();
+
+  const {
+    screen,
+    setScreen,
+    players,
+    setPlayers,
+    games,
+    setGames,
+    activeGame,
+    setActiveGame,
+    extraFields,
+    error,
+    setError,
+    saving,
+    setSaving,
+    handleLogin,
+    handleLogout,
+  } = useKlask4Session(resolveTeamScreen);
+
   const [lastRoundIndex, setLastRoundIndex] = useState(null);
-  const [error, setError] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [extraFields, setExtraFields] = useState({});
 
   const persist = useCallback(async (newPlayers, newGames, newActiveGame, cause) => {
     setSaving(true);
@@ -39,62 +51,7 @@ export default function App() {
     } finally {
       setSaving(false);
     }
-  }, [extraFields]);
-
-  // Load state on mount
-  useEffect(() => {
-    if (!hasToken()) {
-      setScreen('login');
-      return;
-    }
-
-    loadState()
-      .then(data => {
-        const state = loadStateFromData(data);
-        setPlayers(state.players);
-        setGames(state.games);
-        setActiveGame(state.activeGame);
-        setExtraFields(state.extraFields || {});
-
-        if (state.activeGame && !state.activeGame.completed) {
-          setScreen('round');
-        } else {
-          setScreen('main');
-        }
-      })
-      .catch(err => {
-        if (err.message === 'Unauthorized') {
-          setScreen('login');
-        } else {
-          setError(err.message);
-          setScreen('login');
-        }
-      });
-  }, []);
-
-  async function handleLogin(username, password) {
-    await login(username, password);
-    const data = await loadState();
-    const state = loadStateFromData(data);
-    setPlayers(state.players);
-    setGames(state.games);
-    setActiveGame(state.activeGame);
-    setExtraFields(state.extraFields || {});
-
-    if (state.activeGame && !state.activeGame.completed) {
-      setScreen('round');
-    } else {
-      setScreen('main');
-    }
-  }
-
-  function handleLogout() {
-    clearToken();
-    setPlayers([]);
-    setGames([]);
-    setActiveGame(null);
-    setScreen('login');
-  }
+  }, [extraFields, setError, setSaving, setScreen]);
 
   async function handleAddPlayer(name) {
     const { newPlayers } = addPlayer(players, name);
@@ -127,7 +84,7 @@ export default function App() {
     await persist(players, games, updated, `Submit round ${roundIdx + 1} score: ${score1}-${score2}`);
   }
 
-  async function handleNextRound() {
+  function handleNextRound() {
     if (activeGame.completed) {
       setScreen('gameEnd');
     } else {
@@ -146,7 +103,7 @@ export default function App() {
     const completedGame = {
       date: new Date().toISOString(),
       playerIds: [...activeGame.playerIds],
-      rounds: activeGame.rounds.map(r => ({
+      rounds: activeGame.rounds.map((r) => ({
         team1: [...r.team1],
         team2: [...r.team2],
         score1: r.score1,
@@ -168,27 +125,24 @@ export default function App() {
     return (
       <>
         <ModeSwitchButtons rightMode="solo" rightLabel="Solo Mode" />
-        <LoginScreen onLogin={handleLogin} />
+        <LoginScreen title="🎮 Klask 4" onLogin={handleLogin} />
       </>
     );
   }
 
   return (
-    <div className="app-container">
-      <ModeSwitchButtons rightMode="solo" rightLabel="Solo Mode" />
-      {saving && <div className="saving-indicator">Saving...</div>}
-      {error && (
-        <div className="error-banner">
-          {error}
-          <button className="btn-dismiss" onClick={() => setError(null)}>x</button>
-        </div>
-      )}
-
+    <AppShell
+      rightMode="solo"
+      rightLabel="Solo Mode"
+      showModeSwitch={screen !== 'setup'}
+      saving={saving}
+      error={error}
+      onDismissError={() => setError(null)}
+    >
       {screen === 'main' && (
         <MainScreen
           players={players}
           games={games}
-          onAddPlayer={handleAddPlayer}
           onStartSetup={handleStartSetup}
           onLogout={handleLogout}
         />
@@ -198,6 +152,7 @@ export default function App() {
         <GameSetup
           players={players}
           onStartGame={handleStartGame}
+          onAddPlayer={handleAddPlayer}
           onCancel={() => setScreen('main')}
         />
       )}
@@ -227,6 +182,6 @@ export default function App() {
           onFinish={handleFinishGame}
         />
       )}
-    </div>
+    </AppShell>
   );
 }

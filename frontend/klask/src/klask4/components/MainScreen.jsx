@@ -1,20 +1,25 @@
 import React from 'react';
-import PlayerRoster from './PlayerRoster.jsx';
 import PlayerStats from './PlayerStats.jsx';
 import PairStats from './PairStats.jsx';
 import GameHistory from './GameHistory.jsx';
 
-export default function MainScreen({ players, games, onAddPlayer, onStartSetup, onLogout }) {
+export default function MainScreen({ players, games, onStartSetup, onLogout }) {
   const canStartGame = players.length >= 4;
 
   return (
     <div className="main-screen">
-      <div className="top-bar">
-        <h1>Klask 4</h1>
-        <button className="btn-logout" onClick={onLogout}>Logout</button>
-      </div>
+      <button
+        className="icon-btn logout-btn circular-btn"
+        onClick={onLogout}
+        title="Logout"
+        aria-label="Logout"
+      >
+        ⎋
+      </button>
 
-      <PlayerRoster players={players} onAddPlayer={onAddPlayer} />
+      <div className="top-bar">
+        <h1>🎮 Klask 4</h1>
+      </div>
 
       <div className="start-game-section">
         <button

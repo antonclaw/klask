@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { addPlayer, buildStateForSave, loadStateFromData } from './game-logic.js';
-import { clearToken, hasToken, loadState, login, saveState } from './api.js';
+import { addPlayer, buildStateForSave } from './game-logic.js';
+import { saveState } from './api.js';
 import LoginScreen from './components/LoginScreen.jsx';
-import PlayerRoster from './components/PlayerRoster.jsx';
 import GameSetup from './components/GameSetup.jsx';
-import { LoadingScreen, ModeSwitchButtons } from './components/AppShared.jsx';
+import { AppShell, LoadingScreen, ModeSwitchButtons, useLegacyKlaskStyles } from './components/AppShared.jsx';
+import useKlask4Session from './hooks/useKlask4Session.js';
 import {
   calculateProjectedTotals,
   calculateSoloPlayerStats,
@@ -14,22 +14,43 @@ import {
   submitSoloRound,
 } from './solo-logic.js';
 
+function resolveSoloScreen(state) {
+  const loadedSoloMode = createSoloModeState(state.extraFields?.soloMode);
+  return loadedSoloMode.activeGame && !loadedSoloMode.activeGame.completed ? 'round' : 'main';
+}
+
 export default function SoloApp() {
-  const [screen, setScreen] = useState('loading');
-  const [players, setPlayers] = useState([]);
-  const [teamGames, setTeamGames] = useState([]);
-  const [teamActiveGame, setTeamActiveGame] = useState(null);
-  const [extraFields, setExtraFields] = useState({});
+  useLegacyKlaskStyles();
+
+  const {
+    screen,
+    setScreen,
+    players,
+    setPlayers,
+    games,
+    activeGame,
+    extraFields,
+    setExtraFields,
+    error,
+    setError,
+    saving,
+    setSaving,
+    handleLogin,
+    handleLogout,
+  } = useKlask4Session(resolveSoloScreen);
+
   const [soloMode, setSoloMode] = useState(createSoloModeState());
   const [draftScores, setDraftScores] = useState({});
-  const [error, setError] = useState(null);
-  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setSoloMode(createSoloModeState(extraFields?.soloMode));
+  }, [extraFields]);
 
   const persist = useCallback(async (nextPlayers, nextSoloMode, cause) => {
     setSaving(true);
     try {
       const nextExtra = { ...extraFields, soloMode: nextSoloMode };
-      const state = buildStateForSave(nextPlayers, teamGames, teamActiveGame, nextExtra);
+      const state = buildStateForSave(nextPlayers, games, activeGame, nextExtra);
       await saveState(state, cause);
       setExtraFields(nextExtra);
       setSoloMode(nextSoloMode);
@@ -41,59 +62,14 @@ export default function SoloApp() {
     } finally {
       setSaving(false);
     }
-  }, [extraFields, teamActiveGame, teamGames]);
+  }, [activeGame, extraFields, games, setError, setExtraFields, setSaving, setScreen]);
 
-  useEffect(() => {
-    if (!hasToken()) {
-      setScreen('login');
-      return;
-    }
-
-    loadState()
-      .then((data) => {
-        const state = loadStateFromData(data);
-        setPlayers(state.players);
-        setTeamGames(state.games);
-        setTeamActiveGame(state.activeGame);
-        setExtraFields(state.extraFields || {});
-
-        const loadedSoloMode = createSoloModeState(state.extraFields?.soloMode);
-        setSoloMode(loadedSoloMode);
-
-        if (loadedSoloMode.activeGame && !loadedSoloMode.activeGame.completed) {
-          setScreen('round');
-        } else {
-          setScreen('main');
-        }
-      })
-      .catch((err) => {
-        if (err.message === 'Unauthorized') {
-          setScreen('login');
-        } else {
-          setError(err.message);
-          setScreen('login');
-        }
-      });
-  }, []);
-
-  async function handleLogin(username, password) {
-    await login(username, password);
-    const data = await loadState();
-    const state = loadStateFromData(data);
-    setPlayers(state.players);
-    setTeamGames(state.games);
-    setTeamActiveGame(state.activeGame);
-    setExtraFields(state.extraFields || {});
-
-    const loadedSoloMode = createSoloModeState(state.extraFields?.soloMode);
+  const handleSoloLogin = useCallback(async (username, password) => {
+    const state = await handleLogin(username, password);
+    const loadedSoloMode = createSoloModeState(state?.extraFields?.soloMode);
     setSoloMode(loadedSoloMode);
     setScreen(loadedSoloMode.activeGame && !loadedSoloMode.activeGame.completed ? 'round' : 'main');
-  }
-
-  function handleLogout() {
-    clearToken();
-    setScreen('login');
-  }
+  }, [handleLogin, setScreen]);
 
   async function handleAddPlayer(name) {
     const { newPlayers } = addPlayer(players, name);
@@ -170,12 +146,12 @@ export default function SoloApp() {
   }
 
   const playerMap = useMemo(() => new Map(players.map((p) => [p.id, p.name])), [players]);
-  const activeGame = soloMode.activeGame;
-  const totals = activeGame ? calculateTotals(activeGame) : new Map();
-  const projectedTotals = activeGame ? calculateProjectedTotals(activeGame, draftScores) : new Map();
-  const hasFullDraft = activeGame ? activeGame.playerIds.every((id) => Number.isInteger(draftScores[id])) : false;
-  const liveRanking = activeGame
-    ? activeGame.playerIds
+  const currentSoloGame = soloMode.activeGame;
+  const totals = currentSoloGame ? calculateTotals(currentSoloGame) : new Map();
+  const projectedTotals = currentSoloGame ? calculateProjectedTotals(currentSoloGame, draftScores) : new Map();
+  const hasFullDraft = currentSoloGame ? currentSoloGame.playerIds.every((id) => Number.isInteger(draftScores[id])) : false;
+  const liveRanking = currentSoloGame
+    ? currentSoloGame.playerIds
       .map((id) => ({ id, name: playerMap.get(id) || `#${id}`, points: (hasFullDraft ? projectedTotals : totals).get(id) || 0 }))
       .sort((a, b) => a.points - b.points)
     : [];
@@ -189,31 +165,34 @@ export default function SoloApp() {
     return (
       <>
         <ModeSwitchButtons rightMode="team" rightLabel="Team Mode" />
-        <LoginScreen onLogin={handleLogin} />
+        <LoginScreen title="🎮 Klask 4 Solo" onLogin={handleSoloLogin} />
       </>
     );
   }
 
   return (
-    <div className="app-container">
-      <ModeSwitchButtons rightMode="team" rightLabel="Team Mode" />
-
-      {saving && <div className="saving-indicator">Saving...</div>}
-      {error && (
-        <div className="error-banner">
-          {error}
-          <button className="btn-dismiss" onClick={() => setError(null)}>x</button>
-        </div>
-      )}
-
+    <AppShell
+      rightMode="team"
+      rightLabel="Team Mode"
+      showModeSwitch={screen !== 'setup'}
+      saving={saving}
+      error={error}
+      onDismissError={() => setError(null)}
+    >
       {screen === 'main' && (
         <div className="main-screen">
-          <div className="top-bar">
-            <h1>Klask-4 Solo</h1>
-            <button className="btn-logout" onClick={handleLogout}>Logout</button>
-          </div>
+          <button
+            className="icon-btn logout-btn circular-btn"
+            onClick={handleLogout}
+            title="Logout"
+            aria-label="Logout"
+          >
+            ⎋
+          </button>
 
-          <PlayerRoster players={players} onAddPlayer={handleAddPlayer} />
+          <div className="top-bar">
+            <h1>🎮 Klask 4 Solo</h1>
+          </div>
 
           <div className="start-game-section">
             <button className="btn-start-game" disabled={players.length < 4} onClick={handleStartSetup}>Start Solo Game</button>
@@ -287,16 +266,21 @@ export default function SoloApp() {
       )}
 
       {screen === 'setup' && (
-        <GameSetup players={players} onStartGame={handleStartGame} onCancel={() => setScreen('main')} />
+        <GameSetup
+          players={players}
+          onStartGame={handleStartGame}
+          onAddPlayer={handleAddPlayer}
+          onCancel={() => setScreen('main')}
+        />
       )}
 
-      {screen === 'round' && activeGame && (
+      {screen === 'round' && currentSoloGame && (
         <div className="round-screen">
-          <h2>Solo Round {activeGame.currentRound + 1} of 3</h2>
+          <h2>Solo Round {currentSoloGame.currentRound + 1} of 3</h2>
           <p className="setup-hint">Choose score 0-5 for each player (lower is better).</p>
 
           <div className="solo-score-grid">
-            {activeGame.playerIds.map((id) => (
+            {currentSoloGame.playerIds.map((id) => (
               <div className="solo-score-row" key={id}>
                 <div className="solo-player-name">{playerMap.get(id) || `#${id}`}</div>
                 <div className="score-row">
@@ -343,13 +327,13 @@ export default function SoloApp() {
         </div>
       )}
 
-      {screen === 'summary' && activeGame && (
+      {screen === 'summary' && currentSoloGame && (
         <div className="game-end">
           <h2>Game Complete!</h2>
           <div className="trophy-section">
             <div className="trophy">&#127942;</div>
             <div className="winner-names">
-              {activeGame.playerIds
+              {currentSoloGame.playerIds
                 .map((id) => ({ id, name: playerMap.get(id) || `#${id}`, points: totals.get(id) || 0 }))
                 .sort((a, b) => a.points - b.points)[0]?.name}
             </div>
@@ -358,7 +342,7 @@ export default function SoloApp() {
 
           <h3>Final Standings</h3>
           <div className="final-standings">
-            {activeGame.playerIds
+            {currentSoloGame.playerIds
               .map((id) => ({ id, name: playerMap.get(id) || `#${id}`, points: totals.get(id) || 0 }))
               .sort((a, b) => a.points - b.points)
               .map((row, idx) => (
@@ -371,16 +355,16 @@ export default function SoloApp() {
           </div>
 
           <h3>Round Details</h3>
-          {activeGame.rounds.map((round, idx) => (
+          {currentSoloGame.rounds.map((round, idx) => (
             <div className="round-detail" key={idx}>
               <span className="round-label">R{idx + 1}:</span>
-              <span>{activeGame.playerIds.map((id) => `${playerMap.get(id) || `#${id}`}: ${round.scores[id]}`).join(' | ')}</span>
+              <span>{currentSoloGame.playerIds.map((id) => `${playerMap.get(id) || `#${id}`}: ${round.scores[id]}`).join(' | ')}</span>
             </div>
           ))}
 
           <button className="btn-primary" onClick={finishGame}>Back to Main</button>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

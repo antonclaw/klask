@@ -14,12 +14,16 @@ export default function PlayerRoster({ players, onAddPlayer }) {
 
   return (
     <section>
-      <div className="section-header">
-        <h2>Players ({players.length})</h2>
-        <button className="btn-small" onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancel' : '+ Add Player'}
-        </button>
-      </div>
+      <button
+        className="icon-btn add-player-btn circular-btn"
+        onClick={() => setShowForm(!showForm)}
+        title={showForm ? 'Cancel add player' : 'Add player'}
+        aria-label={showForm ? 'Cancel add player' : 'Add player'}
+      >
+        {showForm ? '×' : '+'}
+      </button>
+
+      <h2>Players</h2>
       {showForm && (
         <form className="add-player-form" onSubmit={handleAdd}>
           <input

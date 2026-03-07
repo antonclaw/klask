@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 
-export default function GameSetup({ players, onStartGame, onCancel }) {
+function getNameSizeClass(name) {
+  if (name.length > 16) return ' name-size-xs';
+  if (name.length > 10) return ' name-size-sm';
+  return '';
+}
+
+export default function GameSetup({ players, onStartGame, onCancel, onAddPlayer }) {
   const [selected, setSelected] = useState(() => new Set(players.slice(0, 4).map(p => p.id)));
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newPlayerName, setNewPlayerName] = useState('');
 
   function toggle(id) {
     const next = new Set(selected);
@@ -15,15 +23,44 @@ export default function GameSetup({ players, onStartGame, onCancel }) {
 
   const canStart = selected.size === 4;
 
+  async function handleAddPlayer(e) {
+    e.preventDefault();
+    if (!onAddPlayer || !newPlayerName.trim()) return;
+    await onAddPlayer(newPlayerName.trim());
+    setNewPlayerName('');
+    setShowAddForm(false);
+  }
+
   return (
     <div className="game-setup">
+      <button
+        className="icon-btn add-player-btn circular-btn"
+        onClick={() => setShowAddForm((prev) => !prev)}
+        title={showAddForm ? 'Cancel add player' : 'Add player'}
+        aria-label={showAddForm ? 'Cancel add player' : 'Add player'}
+      >
+        {showAddForm ? '×' : '+'}
+      </button>
+
       <h2>Select 4 Players</h2>
       <p className="setup-hint">{selected.size}/4 selected</p>
+      {showAddForm && (
+        <form className="add-player-form setup-add-player-form" onSubmit={handleAddPlayer}>
+          <input
+            type="text"
+            placeholder="Player name"
+            value={newPlayerName}
+            onChange={(e) => setNewPlayerName(e.target.value)}
+            autoFocus
+          />
+          <button type="submit" disabled={!newPlayerName.trim()}>Add</button>
+        </form>
+      )}
       <div className="toggle-grid">
         {players.map(p => (
           <button
             key={p.id}
-            className={`toggle-btn${selected.has(p.id) ? ' active' : ''}`}
+            className={`toggle-btn${getNameSizeClass(p.name)}${selected.has(p.id) ? ' active' : ''}`}
             onClick={() => toggle(p.id)}
           >
             {p.name}
