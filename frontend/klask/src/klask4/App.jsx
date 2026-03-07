@@ -13,6 +13,7 @@ import GameSetup from './components/GameSetup.jsx';
 import RoundScreen from './components/RoundScreen.jsx';
 import RoundResults from './components/RoundResults.jsx';
 import GameEnd from './components/GameEnd.jsx';
+import { LoadingScreen, ModeSwitchButtons } from './components/AppShared.jsx';
 
 // Screens: loading, login, main, setup, round, roundResults, gameEnd
 export default function App() {
@@ -159,37 +160,14 @@ export default function App() {
     await persist(players, newGames, null, 'Complete game');
   }
 
-  function getMainAppHref() {
-    const path = window.location.pathname;
-    if (path.includes('/frontend/klask/dist/')) {
-      return './index.html?from=klask4';
-    }
-    if (path.endsWith('/klask-4.html')) {
-      return './index.html?from=klask4';
-    }
-    return '/?from=klask4';
-  }
-
-  function getSoloModeHref() {
-    const path = window.location.pathname;
-    if (path.includes('/frontend/klask/dist/')) {
-      return './klask-4-solo.html';
-    }
-    if (path.endsWith('/klask-4.html')) {
-      return './klask-4-solo.html';
-    }
-    return '/klask-4-solo';
-  }
-
   if (screen === 'loading') {
-    return <div className="loading-screen"><div className="loading-text">Loading...</div></div>;
+    return <LoadingScreen />;
   }
 
   if (screen === 'login') {
     return (
       <>
-        <a className="switch-app-btn switch-app-btn-top-left" href={getMainAppHref()}>Klask</a>
-        <a className="switch-app-btn switch-app-btn-top-right" href={getSoloModeHref()}>Solo Mode</a>
+        <ModeSwitchButtons rightMode="solo" rightLabel="Solo Mode" />
         <LoginScreen onLogin={handleLogin} />
       </>
     );
@@ -197,8 +175,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <a className="switch-app-btn switch-app-btn-top-left" href={getMainAppHref()}>Klask</a>
-      <a className="switch-app-btn switch-app-btn-top-right" href={getSoloModeHref()}>Solo Mode</a>
+      <ModeSwitchButtons rightMode="solo" rightLabel="Solo Mode" />
       {saving && <div className="saving-indicator">Saving...</div>}
       {error && (
         <div className="error-banner">

@@ -4,6 +4,7 @@ import { clearToken, hasToken, loadState, login, saveState } from './api.js';
 import LoginScreen from './components/LoginScreen.jsx';
 import PlayerRoster from './components/PlayerRoster.jsx';
 import GameSetup from './components/GameSetup.jsx';
+import { LoadingScreen, ModeSwitchButtons } from './components/AppShared.jsx';
 import {
   calculateProjectedTotals,
   calculateSoloPlayerStats,
@@ -12,18 +13,6 @@ import {
   createSoloModeState,
   submitSoloRound,
 } from './solo-logic.js';
-
-function getModeHref(pathname, mode) {
-  if (pathname.includes('/frontend/klask/dist/') || pathname.endsWith('/klask-4.html') || pathname.endsWith('/klask-4-solo.html')) {
-    if (mode === 'klask') return './index.html?from=klask4';
-    if (mode === 'team') return './klask-4.html';
-    return './klask-4-solo.html';
-  }
-
-  if (mode === 'klask') return '/?from=klask4';
-  if (mode === 'team') return '/klask-4';
-  return '/klask-4-solo';
-}
 
 export default function SoloApp() {
   const [screen, setScreen] = useState('loading');
@@ -193,14 +182,13 @@ export default function SoloApp() {
   const playerStats = useMemo(() => calculateSoloPlayerStats(players, soloMode.games), [players, soloMode.games]);
 
   if (screen === 'loading') {
-    return <div className="loading-screen"><div className="loading-text">Loading...</div></div>;
+    return <LoadingScreen />;
   }
 
   if (screen === 'login') {
     return (
       <>
-        <a className="switch-app-btn switch-app-btn-top-left" href={getModeHref(window.location.pathname, 'klask')}>Klask</a>
-        <a className="switch-app-btn switch-app-btn-top-right" href={getModeHref(window.location.pathname, 'team')}>Team Mode</a>
+        <ModeSwitchButtons rightMode="team" rightLabel="Team Mode" />
         <LoginScreen onLogin={handleLogin} />
       </>
     );
@@ -208,8 +196,7 @@ export default function SoloApp() {
 
   return (
     <div className="app-container">
-      <a className="switch-app-btn switch-app-btn-top-left" href={getModeHref(window.location.pathname, 'klask')}>Klask</a>
-      <a className="switch-app-btn switch-app-btn-top-right" href={getModeHref(window.location.pathname, 'team')}>Team Mode</a>
+      <ModeSwitchButtons rightMode="team" rightLabel="Team Mode" />
 
       {saving && <div className="saving-indicator">Saving...</div>}
       {error && (
