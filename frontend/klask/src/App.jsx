@@ -1,8 +1,6 @@
 import { useEffect } from 'react';
 
 const legacyMarkup = `
-<a id="switchToKlask4Btn" class="switch-app-btn switch-app-btn-top-left" href="/klask-4">Klask-4</a>
-
 <div id="loadingScreen" class="loading-screen">
     <div class="klask-board">
         <div class="goal-hole goal-left"></div>
@@ -15,6 +13,7 @@ const legacyMarkup = `
 </div>
 
 <div id="loginScreen" class="login-screen" style="display: none;">
+    <a class="switch-to-klask4-btn switch-app-btn switch-app-btn-top-left" href="/klask-4">Klask-4</a>
     <div class="login-box">
         <h1>🎮 Klask</h1>
         <form id="loginForm" onsubmit="handleLogin(event)">
@@ -27,6 +26,7 @@ const legacyMarkup = `
 </div>
 
 <div id="mainApp" style="display: none;">
+<a class="switch-to-klask4-btn switch-app-btn switch-app-btn-top-left" href="/klask-4">Klask-4</a>
 
 <div id="notification" class="notification"></div>
 
@@ -116,10 +116,8 @@ export default function App() {
       document.head.appendChild(link);
     }
 
-    const switchBtn = document.getElementById('switchToKlask4Btn');
-    if (switchBtn) {
-      switchBtn.setAttribute('href', resolveKlask4Href(window.location.pathname));
-    }
+    document.querySelectorAll('.switch-to-klask4-btn')
+      .forEach((btn) => btn.setAttribute('href', resolveKlask4Href(window.location.pathname)));
 
     const scriptPaths = ['legacy/js/game-logic.js', 'legacy/js/app.js'];
     const loadedScripts = [];

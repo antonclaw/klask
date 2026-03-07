@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Klask</title>
+  <script>
+    // Prevent loading-screen flash when returning from Klask-4.
+    if (new URLSearchParams(window.location.search).get('from') === 'klask4') {
+      const style = document.createElement('style');
+      style.textContent = '#loadingScreen{display:none!important}';
+      document.head.appendChild(style);
+    }
+  </script>
 </head>
 <body>
   <div id="root"></div>

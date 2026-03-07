@@ -5,6 +5,7 @@
 const API_URL = location.hostname === 'localhost'
     ? 'http://localhost:3000/api'
     : '/api';
+const SKIP_LOADING_FROM_KLASK4 = new URLSearchParams(window.location.search).get('from') === 'klask4';
 
 /* ===============================
    UI STATE
@@ -93,6 +94,10 @@ async function handleAuthResponse(res) {
 
 function hideLoadingScreen() {
     const loadingScreen = document.getElementById('loadingScreen');
+    if (SKIP_LOADING_FROM_KLASK4) {
+        loadingScreen.style.display = 'none';
+        return;
+    }
     loadingScreen.classList.add('fade-out');
 
     // Remove from DOM after fade animation completes
@@ -562,10 +567,13 @@ function render() {
 async function initializeApp() {
     const loadStartTime = Date.now();
     let handler = null;
-    let minLoadTime = 2000;
+    let minLoadTime = SKIP_LOADING_FROM_KLASK4 ? 0 : 2000;
     let timeoutId = null;
 
     const loadingScreen = document.getElementById('loadingScreen');
+    if (SKIP_LOADING_FROM_KLASK4) {
+        loadingScreen.style.display = 'none';
+    }
     loadingScreen.addEventListener('click', () => {
         minLoadTime = 0;
         if (handler) {

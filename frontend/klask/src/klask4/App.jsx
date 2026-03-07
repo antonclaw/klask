@@ -159,12 +159,12 @@ export default function App() {
   function getMainAppHref() {
     const path = window.location.pathname;
     if (path.includes('/frontend/klask/dist/')) {
-      return './index.html';
+      return './index.html?from=klask4';
     }
     if (path.endsWith('/klask-4.html')) {
-      return './index.html';
+      return './index.html?from=klask4';
     }
-    return '/';
+    return '/?from=klask4';
   }
 
   if (screen === 'loading') {
