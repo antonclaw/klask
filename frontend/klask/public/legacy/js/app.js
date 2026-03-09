@@ -526,13 +526,22 @@ function render() {
         if (currentP1) {
             p1.value = currentP1;
         } else {
-            p1.value = players[0].id;
+            // Default first player to current champion when available
+            const champ = players.find(p => p.id === championship.championId);
+            if (champ) {
+                p1.value = champ.id;
+            } else {
+                p1.value = players[0].id;
+            }
         }
 
         if (currentP2) {
             p2.value = currentP2;
         } else {
-            p2.value = players[1].id;
+            // Ensure player 2 is different from player 1
+            const p1IdNow = +p1.value;
+            const other = players.find(p => p.id !== p1IdNow) || players[0];
+            p2.value = other.id;
         }
     }
 
