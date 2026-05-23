@@ -58,8 +58,7 @@ function createTable(headers, rows, cssClass = 'data-table', options = {}) {
     const headerCells = columns.map(column => {
         const active = column.key === defaultSort.key;
         const direction = active ? defaultSort.direction : column.defaultDirection;
-        const indicator = active ? `<span class="sort-indicator ${direction}" aria-hidden="true"></span>` : '';
-        return `<th aria-sort="${active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><button type="button" class="sortable-header" data-table-id="${tableId}" data-column-key="${column.key}" data-direction="${direction}"><span>${column.label}</span>${indicator}</button></th>`;
+        return `<th aria-sort="${active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><button type="button" class="sortable-header" data-table-id="${tableId}" data-column-key="${column.key}" data-direction="${direction}"><span>${column.label}</span></button></th>`;
     }).join('');
 
     const bodyRows = sortedRows.map(row => {
@@ -132,10 +131,8 @@ function initializeSortableTable(tableId, columns, rows) {
             table.querySelectorAll('th').forEach(th => th.setAttribute('aria-sort', 'none'));
             table.querySelectorAll('.sortable-header').forEach(header => {
                 header.dataset.direction = columns.find(c => String(c.key) === header.dataset.columnKey)?.defaultDirection || 'asc';
-                header.querySelector('.sort-indicator')?.remove();
             });
             button.dataset.direction = nextDirection;
-            button.insertAdjacentHTML('beforeend', `<span class="sort-indicator ${nextDirection}" aria-hidden="true"></span>`);
             button.closest('th').setAttribute('aria-sort', nextDirection === 'asc' ? 'ascending' : 'descending');
             renderRows(sortedRows);
         });

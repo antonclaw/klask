@@ -928,23 +928,6 @@ h3 {
   cursor: pointer;
 }
 
-.sort-indicator {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  margin-left: 2px;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-}
-
-.sort-indicator.asc {
-  border-bottom: 6px solid currentColor;
-}
-
-.sort-indicator.desc {
-  border-top: 6px solid currentColor;
-}
-
 .data-table td {
   padding: 12px 6px;
   color: var(--color-gray-800);
