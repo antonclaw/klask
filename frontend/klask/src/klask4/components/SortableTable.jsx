@@ -54,7 +54,7 @@ export default function SortableTable({ columns, rows, rowKey, defaultSort, getR
                   <button type="button" className="sortable-header" onClick={() => handleSort(column)}>
                     <span>{column.label}</span>
                     <span className="sort-indicator" aria-hidden="true">
-                      {active ? (sort.direction === 'asc' ? '▲' : '▼') : '↕'}
+                      {active ? (sort.direction === 'asc' ? '▲' : '▼') : ''}
                     </span>
                   </button>
                 </th>
