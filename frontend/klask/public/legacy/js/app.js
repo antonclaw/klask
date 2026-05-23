@@ -18,19 +18,62 @@ let score2 = null;
    UI UTILITIES
 ================================ */
 
-// Create a data table with headers and rows
-function createTable(headers, rows, cssClass = 'data-table') {
-    const headerCells = headers.map(h => `<th>${h}</th>`).join('');
-    const bodyRows = rows.map(row => {
+// Create a data table with sortable headers and rows
+function createTable(headers, rows, cssClass = 'data-table', options = {}) {
+    const columns = headers.map((header, index) => {
+        if (typeof header === 'object') return { defaultDirection: 'asc', ...header, index };
+        return { label: header, key: index, index, defaultDirection: 'asc' };
+    });
+    const defaultSort = options.defaultSort || { key: columns[0]?.key, direction: 'asc' };
+    const tableId = options.id || `sortable-table-${Math.random().toString(36).slice(2)}`;
+
+    const getSortValue = (row, column) => {
+        if (row.sortValues && Object.prototype.hasOwnProperty.call(row.sortValues, column.key)) {
+            return row.sortValues[column.key];
+        }
+        return row.cells[column.index];
+    };
+
+    const compareValues = (a, b) => {
+        const aEmpty = a === null || a === undefined || a === '';
+        const bEmpty = b === null || b === undefined || b === '';
+        if (aEmpty && bEmpty) return 0;
+        if (aEmpty) return 1;
+        if (bEmpty) return -1;
+        const aNumber = typeof a === 'number' ? a : Number(String(a).replace(/[^0-9.-]/g, ''));
+        const bNumber = typeof b === 'number' ? b : Number(String(b).replace(/[^0-9.-]/g, ''));
+        if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
+        return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+    };
+
+    const sortedRows = rows
+        .map((row, index) => ({ row, index }))
+        .sort((a, b) => {
+            const column = columns.find(c => c.key === defaultSort.key) || columns[0];
+            const result = compareValues(getSortValue(a.row, column), getSortValue(b.row, column));
+            return (defaultSort.direction === 'desc' ? -result : result) || a.index - b.index;
+        })
+        .map(({ row }) => row);
+
+    const headerCells = columns.map(column => {
+        const active = column.key === defaultSort.key;
+        const direction = active ? defaultSort.direction : column.defaultDirection;
+        const indicator = active ? (direction === 'asc' ? '▲' : '▼') : '↕';
+        return `<th aria-sort="${active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><button type="button" class="sortable-header" data-table-id="${tableId}" data-column-key="${column.key}" data-direction="${direction}"><span>${column.label}</span><span class="sort-indicator" aria-hidden="true">${indicator}</span></button></th>`;
+    }).join('');
+
+    const bodyRows = sortedRows.map(row => {
         const cells = row.cells.map(c => `<td>${c}</td>`).join('');
         const clickAttr = row.onClick ? `onclick="${row.onClick}"` : '';
         const cursorStyle = row.onClick ? 'cursor: pointer;' : '';
         return `<tr ${clickAttr} style="${cursorStyle}">${cells}</tr>`;
     }).join('');
 
+    queueMicrotask(() => initializeSortableTable(tableId, columns, sortedRows));
+
     return `
         <div class="table-wrapper">
-            <table class="${cssClass}">
+            <table class="${cssClass}" id="${tableId}">
                 <thead>
                     <tr>${headerCells}</tr>
                 </thead>
@@ -40,6 +83,63 @@ function createTable(headers, rows, cssClass = 'data-table') {
             </table>
         </div>
     `;
+}
+
+function initializeSortableTable(tableId, columns, rows) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+
+    const getSortValue = (row, column) => row.sortValues && Object.prototype.hasOwnProperty.call(row.sortValues, column.key)
+        ? row.sortValues[column.key]
+        : row.cells[column.index];
+
+    const compareValues = (a, b) => {
+        const aEmpty = a === null || a === undefined || a === '';
+        const bEmpty = b === null || b === undefined || b === '';
+        if (aEmpty && bEmpty) return 0;
+        if (aEmpty) return 1;
+        if (bEmpty) return -1;
+        const aNumber = typeof a === 'number' ? a : Number(String(a).replace(/[^0-9.-]/g, ''));
+        const bNumber = typeof b === 'number' ? b : Number(String(b).replace(/[^0-9.-]/g, ''));
+        if (Number.isFinite(aNumber) && Number.isFinite(bNumber)) return aNumber - bNumber;
+        return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+    };
+
+    const renderRows = (sortedRows) => {
+        tbody.innerHTML = sortedRows.map(row => {
+            const cells = row.cells.map(c => `<td>${c}</td>`).join('');
+            const clickAttr = row.onClick ? `onclick="${row.onClick}"` : '';
+            const cursorStyle = row.onClick ? 'cursor: pointer;' : '';
+            return `<tr ${clickAttr} style="${cursorStyle}">${cells}</tr>`;
+        }).join('');
+    };
+
+    table.querySelectorAll('.sortable-header').forEach(button => {
+        button.addEventListener('click', () => {
+            const column = columns.find(c => String(c.key) === button.dataset.columnKey);
+            const currentDirection = button.dataset.direction;
+            const isActive = button.closest('th').getAttribute('aria-sort') !== 'none';
+            const nextDirection = isActive ? (currentDirection === 'asc' ? 'desc' : 'asc') : (column.defaultDirection || 'asc');
+            const sortedRows = rows
+                .map((row, index) => ({ row, index }))
+                .sort((a, b) => {
+                    const result = compareValues(getSortValue(a.row, column), getSortValue(b.row, column));
+                    return (nextDirection === 'desc' ? -result : result) || a.index - b.index;
+                })
+                .map(({ row }) => row);
+
+            table.querySelectorAll('th').forEach(th => th.setAttribute('aria-sort', 'none'));
+            table.querySelectorAll('.sortable-header').forEach(header => {
+                header.dataset.direction = columns.find(c => String(c.key) === header.dataset.columnKey)?.defaultDirection || 'asc';
+                header.querySelector('.sort-indicator').textContent = '↕';
+            });
+            button.dataset.direction = nextDirection;
+            button.querySelector('.sort-indicator').textContent = nextDirection === 'asc' ? '▲' : '▼';
+            button.closest('th').setAttribute('aria-sort', nextDirection === 'asc' ? 'ascending' : 'descending');
+            renderRows(sortedRows);
+        });
+    });
 }
 
 // Toggle visibility of an element
@@ -551,17 +651,32 @@ function render() {
     if (stats.length === 0) {
         document.getElementById('stats').innerHTML = '<p>No statistics yet</p>';
     } else {
-        const headers = ['Player', 'Win %', 'Games', 'Points %', 'Champion Days', 'Max Streak'];
+        const headers = [
+            { key: 'name', label: 'Player' },
+            { key: 'winPercent', label: 'Win %', defaultDirection: 'desc' },
+            { key: 'totalGames', label: 'Games', defaultDirection: 'desc' },
+            { key: 'pointPercent', label: 'Points %', defaultDirection: 'desc' },
+            { key: 'totalChampionDays', label: 'Champion Days', defaultDirection: 'desc' },
+            { key: 'maxChampionStreak', label: 'Max Streak', defaultDirection: 'desc' }
+        ];
         const rows = stats.map(s => {
             const player = players.find(p => p.name === s.name);
             const playerId = player ? player.id : null;
             return {
                 cells: [s.name, `${s.winPercent}%`, s.totalGames, `${s.pointPercent}%`, s.totalChampionDays, s.maxChampionStreak],
+                sortValues: {
+                    name: s.name,
+                    winPercent: Number(s.winPercent),
+                    totalGames: s.totalGames,
+                    pointPercent: Number(s.pointPercent),
+                    totalChampionDays: s.totalChampionDays,
+                    maxChampionStreak: s.maxChampionStreak
+                },
                 onClick: `showHeadToHeadPopup(${playerId})`
             };
         });
 
-        document.getElementById('stats').innerHTML = createTable(headers, rows, 'data-table');
+        document.getElementById('stats').innerHTML = createTable(headers, rows, 'data-table', { id: 'stats-table', defaultSort: { key: 'winPercent', direction: 'desc' } });
     }
 
     const champ = players.find(p => p.id === championship.championId);
@@ -636,17 +751,28 @@ function showHeadToHeadPopup(playerId) {
     if (h2hStats.length === 0) {
         body.innerHTML = '<p style="color: #111111; text-align: center;">No games played against other players yet.</p>';
     } else {
-        const headers = ['Opponent', 'Games', 'Win Balance', 'Avg Point Diff'];
+        const headers = [
+            { key: 'name', label: 'Opponent' },
+            { key: 'gamesAgainst', label: 'Games', defaultDirection: 'desc' },
+            { key: 'winBalance', label: 'Win Balance', defaultDirection: 'desc' },
+            { key: 'avgPointDiff', label: 'Avg Point Diff', defaultDirection: 'desc' }
+        ];
         const rows = h2hStats.map(s => ({
             cells: [
                 s.name,
                 s.gamesAgainst,
                 `${s.winBalance > 0 ? '+' : ''}${s.winBalance}`,
                 `${s.avgPointDiff > 0 ? '+' : ''}${s.avgPointDiff}`
-            ]
+            ],
+            sortValues: {
+                name: s.name,
+                gamesAgainst: s.gamesAgainst,
+                winBalance: s.winBalance,
+                avgPointDiff: Number(s.avgPointDiff)
+            }
         }));
 
-        body.innerHTML = createTable(headers, rows, 'data-table h2h-table');
+        body.innerHTML = createTable(headers, rows, 'data-table h2h-table', { id: 'h2h-table', defaultSort: { key: 'gamesAgainst', direction: 'desc' } });
     }
 
     showModal('h2hModal');

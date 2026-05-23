@@ -351,6 +351,27 @@ li {
     border-bottom: none;
 }
 
+.sortable-header {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: flex-start;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-transform: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+}
+
+.sort-indicator {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
 .data-table td {
     padding: 14px 12px;
     color: var(--color-gray-800);

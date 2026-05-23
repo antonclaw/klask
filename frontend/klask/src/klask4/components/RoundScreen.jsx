@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { calculateGameResults } from '../game-logic.js';
+import SortableTable from './SortableTable.jsx';
 
 export default function RoundScreen({ game, players, onSubmitScore, onCancel }) {
   const [score1, setScore1] = useState(null);
@@ -92,31 +93,23 @@ export default function RoundScreen({ game, players, onSubmitScore, onCancel }) 
 
       <div className="team-live-stats">
         <h3>Current Standings</h3>
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Player</th>
-                <th>Won</th>
-                <th>Win %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {standings.map((row, idx) => {
-                const winPercent = row.roundsPlayed > 0 ? Math.round((row.roundsWon / row.roundsPlayed) * 100) : 0;
-                return (
-                  <tr key={row.id}>
-                    <td>{idx + 1}</td>
-                    <td>{row.name}</td>
-                    <td>{row.roundsWon}</td>
-                    <td>{winPercent}%</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <SortableTable
+          columns={[
+            { key: 'rank', label: '#', value: (_row, index) => index + 1 },
+            { key: 'name', label: 'Player', value: (row) => row.name },
+            { key: 'roundsWon', label: 'Won', value: (row) => row.roundsWon, defaultDirection: 'desc' },
+            {
+              key: 'winPercent',
+              label: 'Win %',
+              value: (row) => (row.roundsPlayed > 0 ? Math.round((row.roundsWon / row.roundsPlayed) * 100) : 0),
+              defaultDirection: 'desc',
+              render: (row) => `${row.roundsPlayed > 0 ? Math.round((row.roundsWon / row.roundsPlayed) * 100) : 0}%`,
+            },
+          ]}
+          rows={standings}
+          rowKey={(row) => row.id}
+          defaultSort={{ key: 'roundsWon', direction: 'desc' }}
+        />
       </div>
     </div>
   );
