@@ -58,7 +58,7 @@ function createTable(headers, rows, cssClass = 'data-table', options = {}) {
     const headerCells = columns.map(column => {
         const active = column.key === defaultSort.key;
         const direction = active ? defaultSort.direction : column.defaultDirection;
-        const indicator = active ? `<span class="sort-indicator" aria-hidden="true">${direction === 'asc' ? '▴' : '▾'}</span>` : '';
+        const indicator = active ? `<span class="sort-indicator ${direction}" aria-hidden="true"></span>` : '';
         return `<th aria-sort="${active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><button type="button" class="sortable-header" data-table-id="${tableId}" data-column-key="${column.key}" data-direction="${direction}"><span>${column.label}</span>${indicator}</button></th>`;
     }).join('');
 
@@ -135,7 +135,7 @@ function initializeSortableTable(tableId, columns, rows) {
                 header.querySelector('.sort-indicator')?.remove();
             });
             button.dataset.direction = nextDirection;
-            button.insertAdjacentHTML('beforeend', `<span class="sort-indicator" aria-hidden="true">${nextDirection === 'asc' ? '▴' : '▾'}</span>`);
+            button.insertAdjacentHTML('beforeend', `<span class="sort-indicator ${nextDirection}" aria-hidden="true"></span>`);
             button.closest('th').setAttribute('aria-sort', nextDirection === 'asc' ? 'ascending' : 'descending');
             renderRows(sortedRows);
         });

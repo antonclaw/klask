@@ -929,13 +929,20 @@ h3 {
 }
 
 .sort-indicator {
-  font-size: 9px;
-  line-height: 1;
-  opacity: 0.75;
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 2px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
 }
 
-.sort-indicator:empty {
-  display: none;
+.sort-indicator.asc {
+  border-bottom: 6px solid currentColor;
+}
+
+.sort-indicator.desc {
+  border-top: 6px solid currentColor;
 }
 
 .data-table td {
@@ -1128,18 +1135,10 @@ h3 {
   .sortable-header {
     gap: 2px;
   }
-
-  .sort-indicator {
-    font-size: 8px;
-  }
 }
 
 @media (max-width: 480px) {
   .sortable-header {
     gap: 1px;
-  }
-
-  .sort-indicator {
-    font-size: 7px;
   }
 }

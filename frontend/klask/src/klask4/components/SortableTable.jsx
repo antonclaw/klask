@@ -53,11 +53,7 @@ export default function SortableTable({ columns, rows, rowKey, defaultSort, getR
                 <th key={column.key} aria-sort={directionLabel}>
                   <button type="button" className="sortable-header" onClick={() => handleSort(column)}>
                     <span>{column.label}</span>
-                    {active && (
-                      <span className="sort-indicator" aria-hidden="true">
-                        {sort.direction === 'asc' ? '▴' : '▾'}
-                      </span>
-                    )}
+                    {active && <span className={`sort-indicator ${sort.direction}`} aria-hidden="true" />}
                   </button>
                 </th>
               );
