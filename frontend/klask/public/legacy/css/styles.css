@@ -359,8 +359,12 @@ li {
     justify-content: flex-start;
     padding: 0;
     border: 0;
+    appearance: none;
+    -webkit-appearance: none;
     background: transparent;
     color: inherit;
+    box-shadow: none;
+    border-radius: 0;
     font: inherit;
     text-transform: inherit;
     letter-spacing: inherit;
@@ -372,6 +376,10 @@ li {
     font-size: 9px;
     line-height: 1;
     opacity: 0.75;
+}
+
+.sort-indicator:empty {
+    display: none;
 }
 
 .data-table td {
