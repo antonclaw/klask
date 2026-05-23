@@ -58,8 +58,8 @@ function createTable(headers, rows, cssClass = 'data-table', options = {}) {
     const headerCells = columns.map(column => {
         const active = column.key === defaultSort.key;
         const direction = active ? defaultSort.direction : column.defaultDirection;
-        const indicator = active ? (direction === 'asc' ? '▴' : '▾') : '';
-        return `<th aria-sort="${active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><button type="button" class="sortable-header" data-table-id="${tableId}" data-column-key="${column.key}" data-direction="${direction}"><span>${column.label}</span><span class="sort-indicator" aria-hidden="true">${indicator}</span></button></th>`;
+        const indicator = active ? `<span class="sort-indicator" aria-hidden="true">${direction === 'asc' ? '▴' : '▾'}</span>` : '';
+        return `<th aria-sort="${active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}"><button type="button" class="sortable-header" data-table-id="${tableId}" data-column-key="${column.key}" data-direction="${direction}"><span>${column.label}</span>${indicator}</button></th>`;
     }).join('');
 
     const bodyRows = sortedRows.map(row => {
@@ -132,10 +132,10 @@ function initializeSortableTable(tableId, columns, rows) {
             table.querySelectorAll('th').forEach(th => th.setAttribute('aria-sort', 'none'));
             table.querySelectorAll('.sortable-header').forEach(header => {
                 header.dataset.direction = columns.find(c => String(c.key) === header.dataset.columnKey)?.defaultDirection || 'asc';
-                header.querySelector('.sort-indicator').textContent = '';
+                header.querySelector('.sort-indicator')?.remove();
             });
             button.dataset.direction = nextDirection;
-            button.querySelector('.sort-indicator').textContent = nextDirection === 'asc' ? '▴' : '▾';
+            button.insertAdjacentHTML('beforeend', `<span class="sort-indicator" aria-hidden="true">${nextDirection === 'asc' ? '▴' : '▾'}</span>`);
             button.closest('th').setAttribute('aria-sort', nextDirection === 'asc' ? 'ascending' : 'descending');
             renderRows(sortedRows);
         });
