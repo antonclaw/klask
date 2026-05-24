@@ -1,5 +1,6 @@
 import React from 'react';
 import { calculatePairStats } from '../game-logic.js';
+import SortableTable from './SortableTable.jsx';
 
 export default function PairStats({ players, games }) {
   const stats = calculatePairStats(players, games);
@@ -18,30 +19,19 @@ export default function PairStats({ players, games }) {
   return (
     <section>
       <h2>Pair Stats</h2>
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Pair</th>
-              <th>Win/Total</th>
-              <th>Win %</th>
-              <th>Avg Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stats.map((s, i) => (
-              <tr key={s.pair.join('-')} className={s.winPercent === bestWinPct ? 'best-pair' : ''}>
-                <td>{i + 1}</td>
-                <td>{s.names.join(' & ')}</td>
-                <td>{s.roundsWon}/{s.roundsPlayed}</td>
-                <td>{s.winPercent}%</td>
-                <td>{s.avgScore}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <SortableTable
+        columns={[
+          { key: 'rank', label: '#', value: (_row, index) => index + 1 },
+          { key: 'pair', label: 'Pair', value: (row) => row.names.join(' & '), render: (row) => row.names.join(' & ') },
+          { key: 'rounds', label: 'Win/Total', value: (row) => row.roundsWon / Math.max(row.roundsPlayed, 1), defaultDirection: 'desc', render: (row) => `${row.roundsWon}/${row.roundsPlayed}` },
+          { key: 'winPercent', label: 'Win %', value: (row) => row.winPercent, defaultDirection: 'desc', render: (row) => `${row.winPercent}%` },
+          { key: 'avgScore', label: 'Avg Score', value: (row) => row.avgScore, defaultDirection: 'desc' },
+        ]}
+        rows={stats}
+        rowKey={(row) => row.pair.join('-')}
+        defaultSort={{ key: 'winPercent', direction: 'desc' }}
+        getRowClassName={(row) => (row.winPercent === bestWinPct ? 'best-pair' : undefined)}
+      />
     </section>
   );
 }

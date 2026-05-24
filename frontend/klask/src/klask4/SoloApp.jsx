@@ -4,6 +4,7 @@ import { saveState } from './api.js';
 import LoginScreen from './components/LoginScreen.jsx';
 import GameSetup from './components/GameSetup.jsx';
 import { AppShell, LoadingScreen, ModeSwitchButtons, useLegacyKlaskStyles } from './components/AppShared.jsx';
+import SortableTable from './components/SortableTable.jsx';
 import useKlask4Session from './hooks/useKlask4Session.js';
 import {
   calculateProjectedTotals,
@@ -206,32 +207,19 @@ export default function SoloApp() {
             {soloMode.games.length === 0 ? (
               <p className="empty-text">No completed solo games yet.</p>
             ) : (
-              <div className="table-wrapper">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Player</th>
-                      <th>Games</th>
-                      <th>Wins</th>
-                      <th>Avg Pts</th>
-                      <th>Best</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {playerStats.map((row, idx) => (
-                      <tr key={row.playerId}>
-                        <td>{idx + 1}</td>
-                        <td>{row.name}</td>
-                        <td>{row.gamesPlayed}</td>
-                        <td>{row.wins}</td>
-                        <td>{row.avgPoints ?? '—'}</td>
-                        <td>{row.bestGamePoints ?? '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <SortableTable
+                columns={[
+                  { key: 'rank', label: '#', value: (_row, index) => index + 1 },
+                  { key: 'name', label: 'Player', value: (row) => row.name },
+                  { key: 'gamesPlayed', label: 'Games', value: (row) => row.gamesPlayed, defaultDirection: 'desc' },
+                  { key: 'wins', label: 'Wins', value: (row) => row.wins, defaultDirection: 'desc' },
+                  { key: 'avgPoints', label: 'Avg Pts', value: (row) => row.avgPoints ?? null, render: (row) => row.avgPoints ?? '—' },
+                  { key: 'bestGamePoints', label: 'Best', value: (row) => row.bestGamePoints ?? null, render: (row) => row.bestGamePoints ?? '—' },
+                ]}
+                rows={playerStats}
+                rowKey={(row) => row.playerId}
+                defaultSort={{ key: 'wins', direction: 'desc' }}
+              />
             )}
           </section>
 
@@ -307,26 +295,16 @@ export default function SoloApp() {
 
           <div className="solo-live-stats">
             <h3>Current Standings {hasFullDraft ? '(with selected round)' : '(submitted rounds only)'}</h3>
-            <div className="table-wrapper">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Player</th>
-                    <th>Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {liveRanking.map((row, idx) => (
-                    <tr key={row.id}>
-                      <td>{idx + 1}</td>
-                      <td>{row.name}</td>
-                      <td>{row.points}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SortableTable
+              columns={[
+                { key: 'rank', label: '#', value: (_row, index) => index + 1 },
+                { key: 'name', label: 'Player', value: (row) => row.name },
+                { key: 'points', label: 'Points', value: (row) => row.points },
+              ]}
+              rows={liveRanking}
+              rowKey={(row) => row.id}
+              defaultSort={{ key: 'points', direction: 'asc' }}
+            />
           </div>
         </div>
       )}
