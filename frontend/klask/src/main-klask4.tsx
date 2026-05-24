@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './shared-styles.css';
-import SoloApp from './klask4/SoloApp.jsx';
+import App from './klask4/App';
 import './klask4/styles/index.css';
 
-ReactDOM.createRoot(document.getElementById('root')).render(<SoloApp />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);

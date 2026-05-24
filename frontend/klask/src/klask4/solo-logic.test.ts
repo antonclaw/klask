@@ -1,3 +1,4 @@
+// @ts-nocheck
 import assert from 'node:assert/strict';
 import {
   calculateProjectedTotals,
@@ -6,7 +7,7 @@ import {
   createSoloGame,
   createSoloModeState,
   submitSoloRound,
-} from './solo-logic.js';
+} from './solo-logic';
 
 function testCreateSoloModeStateDefaults() {
   const state = createSoloModeState();

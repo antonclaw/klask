@@ -10,14 +10,14 @@ const __dirname = dirname(__filename);
 // Load scripts and execute with explicit filenames so c8 can map coverage.
 const gameLogicPath = join(__dirname, '../klask/src/klask/game-logic.ts');
 const gameLogicCode = readFileSync(gameLogicPath, 'utf8').replace(/^export /gm, '');
-const testsCode = readFileSync(join(__dirname, 'game-logic.test.js'), 'utf8');
-const klask4TestsCode = readFileSync(join(__dirname, 'klask-4.test.js'), 'utf8');
+const testsCode = readFileSync(join(__dirname, 'game-logic.test.ts'), 'utf8');
+const klask4TestsCode = readFileSync(join(__dirname, 'klask-4.test.ts'), 'utf8');
 
 try {
     vm.runInThisContext(gameLogicCode, { filename: gameLogicPath });
-    vm.runInThisContext(testsCode, { filename: join(__dirname, 'game-logic.test.js') });
-    vm.runInThisContext(klask4TestsCode, { filename: join(__dirname, 'klask-4.test.js') });
-    const success = vm.runInThisContext('runTests()', { filename: join(__dirname, 'runner-eval.js') });
+    vm.runInThisContext(testsCode, { filename: join(__dirname, 'game-logic.test.ts') });
+    vm.runInThisContext(klask4TestsCode, { filename: join(__dirname, 'klask-4.test.ts') });
+    const success = vm.runInThisContext('runTests()', { filename: join(__dirname, 'runner-eval.ts') });
     process.exit(success ? 0 : 1);
 } catch (error) {
     console.error('Test execution failed:', error);

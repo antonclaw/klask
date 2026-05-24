@@ -1,5 +1,5 @@
 import { klask4Api } from '../api';
-import { loadStateFromData } from '../game-logic.js';
+import { loadStateFromData } from '../game-logic';
 import { useStateSession } from '../../shared/session';
 
 export default function useKlask4Session(resolveScreen) {

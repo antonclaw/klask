@@ -1,5 +1,5 @@
 import React from 'react';
-import { getRoundWinners, calculateGameResults } from '../game-logic.js';
+import { getRoundWinners, calculateGameResults } from '../game-logic';
 
 export default function RoundResults({ game, players, roundIndex, onNext }) {
   const playerMap = Object.fromEntries(players.map(p => [p.id, p.name]));
