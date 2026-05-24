@@ -30,6 +30,12 @@ function runTests() {
     const tests = [
         testAddPlayerToState,
         testProcessMatchResultFirstGame,
+        testProcessMatchResultStoresEloSnapshot,
+        testProcessMatchResultStoresEloSnapshotWhenPlayer2Wins,
+        testEloUnderdogWinIsWorthMore,
+        testCalculateEloRatingsEmptyState,
+        testCalculateEloRatingsReplaysGames,
+        testCalculateStatsIncludesRating,
         testProcessMatchResultChallengerWinsOnce,
         testNoCandidateIfWinVsChampionIsNotFirstChampionGameOfDay,
         testProcessMatchResultChallengerWinsTwiceSameDay,
@@ -110,6 +116,92 @@ function testProcessMatchResultFirstGame() {
     assertEquals(games[0].score1, 6, 'Score1 should be 6');
     assertEquals(games[0].score2, 4, 'Score2 should be 4');
     assertEquals(championship.championId, aliceId, 'Alice should be champion');
+}
+
+function testProcessMatchResultStoresEloSnapshot() {
+    addPlayerToState('Alice');
+    addPlayerToState('Bob');
+    const aliceId = players[0].id;
+    const bobId = players[1].id;
+
+    processMatchResult(aliceId, bobId, 6, 4);
+
+    assertEquals(games[0].rating.player1Before, 1000, 'Alice should start at 1000');
+    assertEquals(games[0].rating.player2Before, 1000, 'Bob should start at 1000');
+    assertEquals(games[0].rating.player1After, 1020, 'Winner with provisional K=40 should gain 20');
+    assertEquals(games[0].rating.player2After, 980, 'Loser with provisional K=40 should lose 20');
+    assertEquals(games[0].rating.player1Delta, 20, 'Winner delta should be +20');
+    assertEquals(games[0].rating.player2Delta, -20, 'Loser delta should be -20');
+}
+
+function testProcessMatchResultStoresEloSnapshotWhenPlayer2Wins() {
+    addPlayerToState('Alice');
+    addPlayerToState('Bob');
+    const aliceId = players[0].id;
+    const bobId = players[1].id;
+
+    processMatchResult(aliceId, bobId, 4, 6);
+
+    assertEquals(games[0].rating.player1Before, 1000, 'Alice should start at 1000');
+    assertEquals(games[0].rating.player2Before, 1000, 'Bob should start at 1000');
+    assertEquals(games[0].rating.player1After, 980, 'Player 1 loser should lose 20');
+    assertEquals(games[0].rating.player2After, 1020, 'Player 2 winner should gain 20');
+    assertEquals(games[0].rating.player1Delta, -20, 'Player 1 delta should be -20');
+    assertEquals(games[0].rating.player2Delta, 20, 'Player 2 delta should be +20');
+}
+
+function testEloUnderdogWinIsWorthMore() {
+    const favoriteBeatsUnderdog = calculateEloChange(1200, 1000, 10, 10);
+    const underdogBeatsFavorite = calculateEloChange(1000, 1200, 10, 10);
+
+    assert(favoriteBeatsUnderdog.winnerDelta < underdogBeatsFavorite.winnerDelta, 'Upset win should be worth more than expected win');
+    assertEquals(favoriteBeatsUnderdog.winnerDelta, 6, 'Favorite should gain a small amount');
+    assertEquals(underdogBeatsFavorite.winnerDelta, 18, 'Underdog should gain a larger amount');
+}
+
+function testCalculateEloRatingsEmptyState() {
+    const result = calculateEloRatings();
+
+    assertEquals(Object.keys(result.ratings).length, 0, 'No players should produce no ratings');
+    assertEquals(Object.keys(result.gamesPlayed).length, 0, 'No players should produce no game counts');
+}
+
+function testCalculateEloRatingsReplaysGames() {
+    addPlayerToState('Alice');
+    addPlayerToState('Bob');
+    const aliceId = players[0].id;
+    const bobId = players[1].id;
+
+    games.push({
+        date: '2024-01-01T10:00:00Z',
+        player1Id: aliceId,
+        player2Id: bobId,
+        score1: 6,
+        score2: 4
+    });
+
+    const result = calculateEloRatings();
+
+    assertEquals(result.ratings[aliceId], 1020, 'Replay should rate Alice win');
+    assertEquals(result.ratings[bobId], 980, 'Replay should rate Bob loss');
+    assertEquals(result.gamesPlayed[aliceId], 1, 'Alice should have one rated game');
+    assertEquals(result.gamesPlayed[bobId], 1, 'Bob should have one rated game');
+}
+
+function testCalculateStatsIncludesRating() {
+    addPlayerToState('Alice');
+    addPlayerToState('Bob');
+    const aliceId = players[0].id;
+    const bobId = players[1].id;
+
+    processMatchResult(aliceId, bobId, 6, 4);
+
+    const stats = calculateStats();
+    const aliceStats = stats.find(s => s.name === 'Alice');
+    const bobStats = stats.find(s => s.name === 'Bob');
+
+    assertEquals(aliceStats.rating, 1020, 'Alice rating should reflect the game result');
+    assertEquals(bobStats.rating, 980, 'Bob rating should reflect the game result');
 }
 
 function testProcessMatchResultChallengerWinsOnce() {

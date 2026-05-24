@@ -11,6 +11,12 @@ export const championship = {
 export const games = [];
 export const championshipHistory = [];
 
+export const ELO_INITIAL_RATING = 1000;
+export const ELO_PROVISIONAL_GAMES = 10;
+export const ELO_PROVISIONAL_K = 40;
+export const ELO_STANDARD_K = 24;
+export const ELO_MIN_RATING = 100;
+
 /* ===============================
    BUSINESS LOGIC
 ================================ */
@@ -65,6 +71,63 @@ export function addPlayerToState(name) {
     };
     players.push(player);
     return player;
+}
+
+export function expectedEloScore(playerRating, opponentRating) {
+    return 1 / (1 + Math.pow(10, (opponentRating - playerRating) / 400));
+}
+
+export function eloKFactor(gamesPlayed) {
+    return gamesPlayed < ELO_PROVISIONAL_GAMES ? ELO_PROVISIONAL_K : ELO_STANDARD_K;
+}
+
+export function calculateEloChange(winnerRating, loserRating, winnerGamesPlayed = 0, loserGamesPlayed = 0) {
+    const winnerExpected = expectedEloScore(winnerRating, loserRating);
+    const loserExpected = expectedEloScore(loserRating, winnerRating);
+    const winnerK = eloKFactor(winnerGamesPlayed);
+    const loserK = eloKFactor(loserGamesPlayed);
+    const winnerAfter = Math.max(ELO_MIN_RATING, Math.round(winnerRating + winnerK * (1 - winnerExpected)));
+    const loserAfter = Math.max(ELO_MIN_RATING, Math.round(loserRating + loserK * (0 - loserExpected)));
+
+    return {
+        winnerAfter,
+        loserAfter,
+        winnerDelta: winnerAfter - winnerRating,
+        loserDelta: loserAfter - loserRating
+    };
+}
+
+export function calculateEloRatings(gamesToRate = games) {
+    const ratings = {};
+    const gamesPlayed = {};
+
+    for (let i = 0; i < players.length; i++) {
+        const p = players[i];
+        ratings[p.id] = ELO_INITIAL_RATING;
+        gamesPlayed[p.id] = 0;
+    }
+
+    /* c8 ignore next -- V8 reports the for-loop increment as a synthetic branch. */
+    for (let i = 0; i < gamesToRate.length; i++) {
+        const game = gamesToRate[i];
+        if (!(game.player1Id in ratings) || !(game.player2Id in ratings)) continue;
+
+        const winnerId = game.score1 > game.score2 ? game.player1Id : game.player2Id;
+        const loserId = game.score1 > game.score2 ? game.player2Id : game.player1Id;
+        const change = calculateEloChange(
+            ratings[winnerId],
+            ratings[loserId],
+            gamesPlayed[winnerId],
+            gamesPlayed[loserId]
+        );
+
+        ratings[winnerId] = change.winnerAfter;
+        ratings[loserId] = change.loserAfter;
+        gamesPlayed[winnerId]++;
+        gamesPlayed[loserId]++;
+    }
+
+    return { ratings, gamesPlayed };
 }
 
 export function championChangedToday(today) {
@@ -139,6 +202,14 @@ export function processMatchResult(p1Id, p2Id, score1, score2) {
     const winnerId = score1 > score2 ? p1Id : p2Id;
     const loserId = score1 > score2 ? p2Id : p1Id;
 
+    const eloBefore = calculateEloRatings();
+    const eloChange = calculateEloChange(
+        eloBefore.ratings[winnerId],
+        eloBefore.ratings[loserId],
+        eloBefore.gamesPlayed[winnerId],
+        eloBefore.gamesPlayed[loserId]
+    );
+
     const currentDate = new Date();
     const today = currentDate.toDateString();
     const now = currentDate.toISOString();
@@ -150,12 +221,21 @@ export function processMatchResult(p1Id, p2Id, score1, score2) {
         championship.candidate = null;
     }
 
+    const p1Won = winnerId === p1Id;
     games.push({
         date: now,
         player1Id: p1Id,
         player2Id: p2Id,
         score1,
-        score2
+        score2,
+        rating: {
+            player1Before: eloBefore.ratings[p1Id],
+            player2Before: eloBefore.ratings[p2Id],
+            player1After: p1Won ? eloChange.winnerAfter : eloChange.loserAfter,
+            player2After: p1Won ? eloChange.loserAfter : eloChange.winnerAfter,
+            player1Delta: p1Won ? eloChange.winnerDelta : eloChange.loserDelta,
+            player2Delta: p1Won ? eloChange.loserDelta : eloChange.winnerDelta
+        }
     });
 
     const championAlreadyChangedToday = championChangedToday(today);
@@ -199,10 +279,12 @@ export function removeChampionshipEventFromHistory(index) {
 }
 
 export function calculateStats() {
+    const elo = calculateEloRatings();
     const stats = {};
     players.forEach(p => {
         stats[p.id] = {
             name: p.name,
+            rating: elo.ratings[p.id],
             wins: 0,
             losses: 0,
             pointsWon: 0,
