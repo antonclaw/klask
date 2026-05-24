@@ -1,13 +1,13 @@
 import React, { useCallback } from 'react';
-import { saveState } from './api.js';
+import { saveState } from './api';
 import { addPlayer, createGame, submitRoundScore, buildStateForSave } from './game-logic.js';
 import { LoginScreen } from '../shared/AppShared';
 import MainScreen from './components/MainScreen.jsx';
 import GameSetup from './components/GameSetup.jsx';
 import RoundScreen from './components/RoundScreen.jsx';
 import GameEnd from './components/GameEnd.jsx';
-import { AppShell, LoadingScreen, ModeSwitchButtons, useLegacyKlaskStyles } from './components/AppShared.jsx';
-import useKlask4Session from './hooks/useKlask4Session.js';
+import { AppShell, LoadingScreen, ModeSwitchButtons } from './components/AppShared.jsx';
+import useKlask4Session from './hooks/useKlask4Session';
 
 function resolveTeamScreen(state) {
   if (state.activeGame && state.activeGame.completed) return 'gameEnd';
@@ -16,8 +16,6 @@ function resolveTeamScreen(state) {
 
 // Screens: loading, login, main, setup, round, gameEnd
 export default function App() {
-  useLegacyKlaskStyles();
-
   const {
     screen,
     setScreen,

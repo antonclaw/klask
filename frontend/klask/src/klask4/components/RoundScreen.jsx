@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { calculateGameResults } from '../game-logic.js';
 import SortableTable from '../../shared/SortableTable';
+import ScorePicker from '../../shared/ScorePicker';
 
 export default function RoundScreen({ game, players, onSubmitScore, onCancel }) {
   const [score1, setScore1] = useState(null);
@@ -54,17 +55,7 @@ export default function RoundScreen({ game, players, onSubmitScore, onCancel }) 
         <div className="team">
           <div className="team-label">Team 1</div>
           <div className="team-players">{team1Names.join(' & ')}</div>
-          <div className="score-row">
-            {Array.from({ length: 11 }, (_, i) => (
-              <button
-                key={i}
-                className={`score-circle${score1 === i ? ' active' : ''}`}
-                onClick={() => selectScore(1, i)}
-              >
-                {i}
-              </button>
-            ))}
-          </div>
+          <ScorePicker max={10} value={score1} onSelect={(value) => selectScore(1, value)} asButton />
         </div>
 
         <div className="vs">VS</div>
@@ -72,17 +63,7 @@ export default function RoundScreen({ game, players, onSubmitScore, onCancel }) 
         <div className="team">
           <div className="team-label">Team 2</div>
           <div className="team-players">{team2Names.join(' & ')}</div>
-          <div className="score-row">
-            {Array.from({ length: 11 }, (_, i) => (
-              <button
-                key={i}
-                className={`score-circle${score2 === i ? ' active' : ''}`}
-                onClick={() => selectScore(2, i)}
-              >
-                {i}
-              </button>
-            ))}
-          </div>
+          <ScorePicker max={10} value={score2} onSelect={(value) => selectScore(2, value)} asButton />
         </div>
       </div>
 

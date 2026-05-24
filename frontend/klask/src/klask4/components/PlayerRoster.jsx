@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
+import AddPlayerForm from '../../shared/AddPlayerForm';
 
 export default function PlayerRoster({ players, onAddPlayer }) {
-  const [name, setName] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  function handleAdd(e) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    onAddPlayer(name.trim());
-    setName('');
+  async function handleAdd(name) {
+    await onAddPlayer(name);
     setShowForm(false);
   }
+
 
   return (
     <section>
@@ -25,16 +23,7 @@ export default function PlayerRoster({ players, onAddPlayer }) {
 
       <h2>Players</h2>
       {showForm && (
-        <form className="add-player-form" onSubmit={handleAdd}>
-          <input
-            type="text"
-            placeholder="Player name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            autoFocus
-          />
-          <button type="submit" disabled={!name.trim()}>Add</button>
-        </form>
+        <AddPlayerForm onAddPlayer={handleAdd} />
       )}
       <div className="player-chips">
         {players.map(p => (
