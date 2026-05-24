@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { calculateGameResults } from '../game-logic.js';
-import SortableTable from './SortableTable.jsx';
+import SortableTable from '../../shared/SortableTable';
 
 export default function RoundScreen({ game, players, onSubmitScore, onCancel }) {
   const [score1, setScore1] = useState(null);

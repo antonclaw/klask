@@ -1,6 +1,6 @@
 import React from 'react';
 import { calculatePlayerStats } from '../game-logic.js';
-import SortableTable from './SortableTable.jsx';
+import SortableTable from '../../shared/SortableTable';
 
 export default function PlayerStats({ players, games }) {
   const stats = calculatePlayerStats(players, games);

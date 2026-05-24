@@ -1,6 +1,6 @@
 import React from 'react';
 import { calculatePairStats } from '../game-logic.js';
-import SortableTable from './SortableTable.jsx';
+import SortableTable from '../../shared/SortableTable';
 
 export default function PairStats({ players, games }) {
   const stats = calculatePairStats(players, games);
