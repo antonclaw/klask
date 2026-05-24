@@ -1,5 +1,5 @@
 import React from 'react';
-import { calculateGameResults } from '../game-logic.js';
+import { calculateGameResults } from '../game-logic';
 
 export default function GameEnd({ game, players, onFinish }) {
   const playerMap = Object.fromEntries(players.map(p => [p.id, p.name]));

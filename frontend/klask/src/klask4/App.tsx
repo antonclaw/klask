@@ -1,12 +1,13 @@
+// @ts-nocheck
 import React, { useCallback } from 'react';
 import { saveState } from './api';
-import { addPlayer, createGame, submitRoundScore, buildStateForSave } from './game-logic.js';
+import { addPlayer, createGame, submitRoundScore, buildStateForSave } from './game-logic';
 import { LoginScreen } from '../shared/AppShared';
-import MainScreen from './components/MainScreen.jsx';
-import GameSetup from './components/GameSetup.jsx';
-import RoundScreen from './components/RoundScreen.jsx';
-import GameEnd from './components/GameEnd.jsx';
-import { AppShell, LoadingScreen, ModeSwitchButtons } from './components/AppShared.jsx';
+import MainScreen from './components/MainScreen';
+import GameSetup from './components/GameSetup';
+import RoundScreen from './components/RoundScreen';
+import GameEnd from './components/GameEnd';
+import { AppShell, LoadingScreen, ModeSwitchButtons } from './components/AppShared';
 import useKlask4Session from './hooks/useKlask4Session';
 
 function resolveTeamScreen(state) {

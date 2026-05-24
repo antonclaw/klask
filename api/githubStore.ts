@@ -11,7 +11,7 @@ const OWNER = process.env.GITHUB_OWNER;
 const REPO = process.env.GITHUB_REPO;
 const BRANCH = process.env.GITHUB_BRANCH || 'master';
 
-export function createGithubStore(path) {
+export function createGithubStore(path: string) {
     return {
         async readState() {
             try {
@@ -22,8 +22,12 @@ export function createGithubStore(path) {
                     ref: BRANCH
                 });
 
+                if (Array.isArray(res.data) || !('content' in res.data)) {
+                    throw new Error(`GitHub path is not a file: ${path}`);
+                }
+
                 const content = Buffer
-                    .from(res.data.content, 'base64')
+                    .from(res.data.content || '', 'base64')
                     .toString('utf-8');
 
                 return {
@@ -38,12 +42,12 @@ export function createGithubStore(path) {
             }
         },
 
-        async writeState(data, sha, cause) {
+        async writeState(data: unknown, sha: string | null, cause: string) {
             const content = Buffer
                 .from(JSON.stringify(data, null, 2))
                 .toString('base64');
 
-            const payload = {
+            const payload: Parameters<typeof octokit.repos.createOrUpdateFileContents>[0] = {
                 owner: OWNER,
                 repo: REPO,
                 path,

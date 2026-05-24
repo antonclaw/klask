@@ -1,9 +1,10 @@
+// @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { addPlayer, buildStateForSave } from './game-logic.js';
+import { addPlayer, buildStateForSave } from './game-logic';
 import { saveState } from './api';
 import { LoginScreen } from '../shared/AppShared';
-import GameSetup from './components/GameSetup.jsx';
-import { AppShell, LoadingScreen, ModeSwitchButtons } from './components/AppShared.jsx';
+import GameSetup from './components/GameSetup';
+import { AppShell, LoadingScreen, ModeSwitchButtons } from './components/AppShared';
 import SortableTable from '../shared/SortableTable';
 import useKlask4Session from './hooks/useKlask4Session';
 import {
@@ -13,7 +14,7 @@ import {
   createSoloGame,
   createSoloModeState,
   submitSoloRound,
-} from './solo-logic.js';
+} from './solo-logic';
 
 function resolveSoloScreen(state) {
   const loadedSoloMode = createSoloModeState(state.extraFields?.soloMode);

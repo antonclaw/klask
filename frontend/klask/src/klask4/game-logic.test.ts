@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   generateAllPairings,
   shufflePairings,
@@ -10,7 +11,7 @@ import {
   addPlayer,
   buildStateForSave,
   loadStateFromData,
-} from './game-logic.js';
+} from './game-logic';
 
 // ===== Test Runner =====
 

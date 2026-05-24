@@ -1,5 +1,6 @@
+// @ts-nocheck
 import React, { useState } from 'react';
-import { calculateGameResults } from '../game-logic.js';
+import { calculateGameResults } from '../game-logic';
 import SortableTable from '../../shared/SortableTable';
 import ScorePicker from '../../shared/ScorePicker';
 

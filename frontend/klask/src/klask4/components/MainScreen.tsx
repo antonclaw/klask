@@ -1,7 +1,7 @@
 import React from 'react';
-import PlayerStats from './PlayerStats.jsx';
-import PairStats from './PairStats.jsx';
-import GameHistory from './GameHistory.jsx';
+import PlayerStats from './PlayerStats';
+import PairStats from './PairStats';
+import GameHistory from './GameHistory';
 
 export default function MainScreen({ players, games, onStartSetup, onLogout }) {
   const canStartGame = players.length >= 4;

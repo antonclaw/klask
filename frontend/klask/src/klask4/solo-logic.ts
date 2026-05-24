@@ -1,3 +1,4 @@
+// @ts-nocheck
 export function createSoloModeState(existing) {
   return existing || { games: [], activeGame: null };
 }

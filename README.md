@@ -51,7 +51,7 @@ Install dependencies and start backend:
 
 ```bash
 npm ci
-node api/server.js
+npm start
 ```
 
 Server URL:
@@ -79,7 +79,7 @@ Use this sequence to verify both pages end-to-end.
 
 ```bash
 npm ci
-node api/server.js
+npm start
 ```
 
 2. Build frontend assets.
@@ -112,13 +112,13 @@ npm test
 npm run test:coverage
 ```
 
-Coverage is enforced at 100% for `frontend/klask/public/legacy/js/game-logic.js`.
+Coverage is enforced at 100% for `frontend/klask/src/klask/game-logic.ts`.
 
 ## Deploy Routing
 
 `vercel.json` routes:
 
-- `/api/*` -> `api/index.js`
+- `/api/*` -> `api/index.ts`
 - `/` -> `index.html` from `frontend/klask/dist`
 - `/klask-4` and `/klask-4/` -> `klask-4.html` from `frontend/klask/dist`
 - `/klask-4-solo` and `/klask-4-solo/` -> `klask-4-solo.html` from `frontend/klask/dist`
