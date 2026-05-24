@@ -35,6 +35,8 @@ function runTests() {
         testEloUnderdogWinIsWorthMore,
         testCalculateEloRatingsEmptyState,
         testCalculateEloRatingsReplaysGames,
+        testCalculateEloRatingsSkipsUnknownPlayers,
+        testLoadStateFromDataEnrichesLegacyGamesWithElo,
         testCalculateStatsIncludesRating,
         testProcessMatchResultChallengerWinsOnce,
         testNoCandidateIfWinVsChampionIsNotFirstChampionGameOfDay,
@@ -186,6 +188,59 @@ function testCalculateEloRatingsReplaysGames() {
     assertEquals(result.ratings[bobId], 980, 'Replay should rate Bob loss');
     assertEquals(result.gamesPlayed[aliceId], 1, 'Alice should have one rated game');
     assertEquals(result.gamesPlayed[bobId], 1, 'Bob should have one rated game');
+}
+
+function testCalculateEloRatingsSkipsUnknownPlayers() {
+    addPlayerToState('Alice');
+    const aliceId = players[0].id;
+
+    games.push({
+        date: '2024-01-01T10:00:00Z',
+        player1Id: aliceId,
+        player2Id: 999,
+        score1: 6,
+        score2: 4
+    });
+
+    const result = calculateEloRatings();
+
+    assertEquals(result.ratings[aliceId], 1000, 'Unknown opponent game should not affect rating');
+    assertEquals(result.gamesPlayed[aliceId], 0, 'Unknown opponent game should not count as rated');
+    assertEquals(games[0].rating, undefined, 'Unknown opponent game should not receive a rating snapshot');
+}
+
+function testLoadStateFromDataEnrichesLegacyGamesWithElo() {
+    loadStateFromData({
+        players: [
+            { id: 1, name: 'Alice' },
+            { id: 2, name: 'Bob' }
+        ],
+        championship: { championId: 1 },
+        games: [
+            {
+                date: '2024-01-01T10:00:00Z',
+                player1Id: 1,
+                player2Id: 2,
+                score1: 6,
+                score2: 4
+            },
+            {
+                date: '2024-01-02T10:00:00Z',
+                player1Id: 1,
+                player2Id: 2,
+                score1: 3,
+                score2: 6
+            }
+        ],
+        championshipHistory: []
+    });
+
+    assertEquals(games[0].rating.player1Before, 1000, 'Legacy first game should get player 1 rating before');
+    assertEquals(games[0].rating.player1After, 1020, 'Legacy first game should get player 1 rating after');
+    assertEquals(games[1].rating.player1Before, 1020, 'Legacy second game should start from previous rating');
+    assertEquals(games[1].rating.player2Before, 980, 'Legacy second game should start from previous opponent rating');
+    assertEquals(games[1].rating.player1Delta, -22, 'Legacy second game should get underdog-loss delta for player 1');
+    assertEquals(games[1].rating.player2Delta, 22, 'Legacy second game should get upset-win delta for player 2');
 }
 
 function testCalculateStatsIncludesRating() {

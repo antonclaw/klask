@@ -97,7 +97,40 @@ export function calculateEloChange(winnerRating, loserRating, winnerGamesPlayed 
     };
 }
 
-export function calculateEloRatings(gamesToRate = games) {
+export function createEloRatingSnapshot(player1Id, player2Id, score1, score2, ratings, gamesPlayed) {
+    const winnerId = score1 > score2 ? player1Id : player2Id;
+    const loserId = score1 > score2 ? player2Id : player1Id;
+    const player1Won = winnerId === player1Id;
+    const change = calculateEloChange(
+        ratings[winnerId],
+        ratings[loserId],
+        gamesPlayed[winnerId],
+        gamesPlayed[loserId]
+    );
+
+    return {
+        player1Before: ratings[player1Id],
+        player2Before: ratings[player2Id],
+        player1After: player1Won ? change.winnerAfter : change.loserAfter,
+        player2After: player1Won ? change.loserAfter : change.winnerAfter,
+        player1Delta: player1Won ? change.winnerDelta : change.loserDelta,
+        player2Delta: player1Won ? change.loserDelta : change.winnerDelta
+    };
+}
+
+export function applyEloRatingSnapshot(game, ratings, gamesPlayed) {
+    if (!(game.player1Id in ratings) || !(game.player2Id in ratings)) return false;
+
+    const rating = createEloRatingSnapshot(game.player1Id, game.player2Id, game.score1, game.score2, ratings, gamesPlayed);
+    game.rating = rating;
+    ratings[game.player1Id] = rating.player1After;
+    ratings[game.player2Id] = rating.player2After;
+    gamesPlayed[game.player1Id]++;
+    gamesPlayed[game.player2Id]++;
+    return true;
+}
+
+export function createInitialEloState() {
     const ratings = {};
     const gamesPlayed = {};
 
@@ -107,27 +140,22 @@ export function calculateEloRatings(gamesToRate = games) {
         gamesPlayed[p.id] = 0;
     }
 
+    return { ratings, gamesPlayed };
+}
+
+export function calculateEloRatings(gamesToRate = games) {
+    const { ratings, gamesPlayed } = createInitialEloState();
+
     /* c8 ignore next -- V8 reports the for-loop increment as a synthetic branch. */
     for (let i = 0; i < gamesToRate.length; i++) {
-        const game = gamesToRate[i];
-        if (!(game.player1Id in ratings) || !(game.player2Id in ratings)) continue;
-
-        const winnerId = game.score1 > game.score2 ? game.player1Id : game.player2Id;
-        const loserId = game.score1 > game.score2 ? game.player2Id : game.player1Id;
-        const change = calculateEloChange(
-            ratings[winnerId],
-            ratings[loserId],
-            gamesPlayed[winnerId],
-            gamesPlayed[loserId]
-        );
-
-        ratings[winnerId] = change.winnerAfter;
-        ratings[loserId] = change.loserAfter;
-        gamesPlayed[winnerId]++;
-        gamesPlayed[loserId]++;
+        applyEloRatingSnapshot(gamesToRate[i], ratings, gamesPlayed);
     }
 
     return { ratings, gamesPlayed };
+}
+
+export function enrichGamesWithEloRatings() {
+    calculateEloRatings(games);
 }
 
 export function championChangedToday(today) {
@@ -203,12 +231,6 @@ export function processMatchResult(p1Id, p2Id, score1, score2) {
     const loserId = score1 > score2 ? p2Id : p1Id;
 
     const eloBefore = calculateEloRatings();
-    const eloChange = calculateEloChange(
-        eloBefore.ratings[winnerId],
-        eloBefore.ratings[loserId],
-        eloBefore.gamesPlayed[winnerId],
-        eloBefore.gamesPlayed[loserId]
-    );
 
     const currentDate = new Date();
     const today = currentDate.toDateString();
@@ -221,22 +243,15 @@ export function processMatchResult(p1Id, p2Id, score1, score2) {
         championship.candidate = null;
     }
 
-    const p1Won = winnerId === p1Id;
-    games.push({
+    const game = {
         date: now,
         player1Id: p1Id,
         player2Id: p2Id,
         score1,
-        score2,
-        rating: {
-            player1Before: eloBefore.ratings[p1Id],
-            player2Before: eloBefore.ratings[p2Id],
-            player1After: p1Won ? eloChange.winnerAfter : eloChange.loserAfter,
-            player2After: p1Won ? eloChange.loserAfter : eloChange.winnerAfter,
-            player1Delta: p1Won ? eloChange.winnerDelta : eloChange.loserDelta,
-            player2Delta: p1Won ? eloChange.loserDelta : eloChange.winnerDelta
-        }
-    });
+        score2
+    };
+    applyEloRatingSnapshot(game, eloBefore.ratings, eloBefore.gamesPlayed);
+    games.push(game);
 
     const championAlreadyChangedToday = championChangedToday(today);
     let championChanged = false;
@@ -359,6 +374,7 @@ export function loadStateFromData(data) {
     games.length = 0;
     if (data.games) {
         games.push(...data.games);
+        enrichGamesWithEloRatings();
     }
 
     championshipHistory.length = 0;
