@@ -1,25 +1,26 @@
+// @ts-nocheck
 /* ===============================
    STATE
 ================================ */
 
-const players = [];
-const championship = {
+export const players = [];
+export const championship = {
     championId: null,
     candidate: null // { playerId, remainingGames }
 };
-const games = [];
-const championshipHistory = [];
+export const games = [];
+export const championshipHistory = [];
 
 /* ===============================
    BUSINESS LOGIC
 ================================ */
 
-function durationInDays(end, start) {
+export function durationInDays(end, start) {
     const hours = (end - start) / (1000 * 60 * 60);
     return Math.floor((hours + 12) / 24);
 }
 
-function calculateChampionshipDuration(championId) {
+export function calculateChampionshipDuration(championId) {
     if (!championId) return null;
 
     const previousChampionshipEvent = championshipHistory
@@ -35,7 +36,7 @@ function calculateChampionshipDuration(championId) {
 }
 
 // Calculate champion days for a specific championship period
-function calculateChampionDaysForPeriod(championId, startDate, endDate) {
+export function calculateChampionDaysForPeriod(championId, startDate, endDate) {
     const defendedDays = new Set();
     const endDayKey = endDate ? new Date(endDate).toDateString() : null;
 
@@ -56,7 +57,7 @@ function calculateChampionDaysForPeriod(championId, startDate, endDate) {
     return defendedDays.size;
 }
 
-function addPlayerToState(name) {
+export function addPlayerToState(name) {
     // Use Date.now() + players.length to ensure unique IDs even in quick succession
     const player = {
         id: Date.now() + players.length,
@@ -66,7 +67,7 @@ function addPlayerToState(name) {
     return player;
 }
 
-function championChangedToday(today) {
+export function championChangedToday(today) {
     if (championshipHistory.length <= 0) return false;
 
     const lastEvent = championshipHistory[championshipHistory.length - 1];
@@ -76,7 +77,7 @@ function championChangedToday(today) {
 
 }
 
-function countTodayGamesBetween(playerAId, playerBId, today) {
+export function countTodayGamesBetween(playerAId, playerBId, today) {
     let count = 0;
     for (let i = games.length - 1; i >= 0; i--) {
         const g = games[i];
@@ -90,7 +91,7 @@ function countTodayGamesBetween(playerAId, playerBId, today) {
     return count;
 }
 
-function tryConvertCandidateOnChampionWin(winnerId, previousChampionId, now, championAlreadyChangedToday) {
+export function tryConvertCandidateOnChampionWin(winnerId, previousChampionId, now, championAlreadyChangedToday) {
     if (!championship.candidate || championship.candidate.playerId !== winnerId) return false;
     if (championAlreadyChangedToday) return false;
 
@@ -106,7 +107,7 @@ function tryConvertCandidateOnChampionWin(winnerId, previousChampionId, now, cha
     return true;
 }
 
-function maybeStartCandidateWindow(winnerId, championId, today) {
+export function maybeStartCandidateWindow(winnerId, championId, today) {
     if (championship.candidate) return false;
 
     const gamesVsChampionToday = countTodayGamesBetween(winnerId, championId, today);
@@ -120,7 +121,7 @@ function maybeStartCandidateWindow(winnerId, championId, today) {
     return true;
 }
 
-function consumeCandidateWindowIfNeeded(p1Id, p2Id, candidateAtStartId, candidateStartedThisGame, championChanged) {
+export function consumeCandidateWindowIfNeeded(p1Id, p2Id, candidateAtStartId, candidateStartedThisGame, championChanged) {
     if (championChanged || !candidateAtStartId || candidateStartedThisGame) return;
     if (!championship.candidate || championship.candidate.playerId !== candidateAtStartId) return;
 
@@ -134,7 +135,7 @@ function consumeCandidateWindowIfNeeded(p1Id, p2Id, candidateAtStartId, candidat
     }
 }
 
-function processMatchResult(p1Id, p2Id, score1, score2) {
+export function processMatchResult(p1Id, p2Id, score1, score2) {
     const winnerId = score1 > score2 ? p1Id : p2Id;
     const loserId = score1 > score2 ? p2Id : p1Id;
 
@@ -175,7 +176,7 @@ function processMatchResult(p1Id, p2Id, score1, score2) {
     return {championChanged};
 }
 
-function setChampion(newChampionId) {
+export function setChampion(newChampionId) {
     if (newChampionId !== championship.championId) {
         championshipHistory.push({
             date: new Date().toISOString(),
@@ -189,15 +190,15 @@ function setChampion(newChampionId) {
     championship.candidate = null;
 }
 
-function removeGameFromHistory(index) {
+export function removeGameFromHistory(index) {
     games.splice(index, 1);
 }
 
-function removeChampionshipEventFromHistory(index) {
+export function removeChampionshipEventFromHistory(index) {
     championshipHistory.splice(index, 1);
 }
 
-function calculateStats() {
+export function calculateStats() {
     const stats = {};
     players.forEach(p => {
         stats[p.id] = {
@@ -265,7 +266,7 @@ function calculateStats() {
     });
 }
 
-function loadStateFromData(data) {
+export function loadStateFromData(data) {
     players.length = 0;
     players.push(...data.players);
 
@@ -284,7 +285,7 @@ function loadStateFromData(data) {
     }
 }
 
-function getStateForSave() {
+export function getStateForSave() {
     return {
         players,
         championship: {
@@ -295,7 +296,7 @@ function getStateForSave() {
     };
 }
 
-function calculateHeadToHead(playerId) {
+export function calculateHeadToHead(playerId) {
     const opponentStats = {};
 
     // Initialize stats for all other players

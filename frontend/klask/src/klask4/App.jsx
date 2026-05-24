@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { saveState } from './api.js';
 import { addPlayer, createGame, submitRoundScore, buildStateForSave } from './game-logic.js';
-import LoginScreen from './components/LoginScreen.jsx';
+import { LoginScreen } from '../shared/AppShared';
 import MainScreen from './components/MainScreen.jsx';
 import GameSetup from './components/GameSetup.jsx';
 import RoundScreen from './components/RoundScreen.jsx';

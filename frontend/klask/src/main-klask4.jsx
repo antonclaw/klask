@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './shared-styles.css';
 import App from './klask4/App.jsx';
 import './klask4/styles/index.css';
 
