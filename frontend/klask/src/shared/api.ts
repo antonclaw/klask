@@ -3,13 +3,31 @@ const API_URL = import.meta.env.VITE_API_URL || (location.hostname === 'localhos
 type CreateStateClientOptions = {
   path: string;
   tokenKey: string;
+  legacyTokenKeys?: string[];
   credentials?: RequestCredentials;
 };
 
-export function createStateClient({ path, tokenKey, credentials }: CreateStateClientOptions) {
-  const getToken = () => localStorage.getItem(tokenKey);
-  const setToken = (token: string) => localStorage.setItem(tokenKey, token);
-  const clearToken = () => localStorage.removeItem(tokenKey);
+export function createStateClient({ path, tokenKey, legacyTokenKeys = [], credentials }: CreateStateClientOptions) {
+  const getToken = () => {
+    const token = localStorage.getItem(tokenKey);
+    if (token) return token;
+    for (const legacyKey of legacyTokenKeys) {
+      const legacyToken = localStorage.getItem(legacyKey);
+      if (legacyToken) {
+        localStorage.setItem(tokenKey, legacyToken);
+        return legacyToken;
+      }
+    }
+    return null;
+  };
+  const setToken = (token: string) => {
+    localStorage.setItem(tokenKey, token);
+    legacyTokenKeys.forEach((legacyKey) => localStorage.removeItem(legacyKey));
+  };
+  const clearToken = () => {
+    localStorage.removeItem(tokenKey);
+    legacyTokenKeys.forEach((legacyKey) => localStorage.removeItem(legacyKey));
+  };
   const hasToken = () => !!getToken();
   const authHeaders = () => {
     const token = getToken();
