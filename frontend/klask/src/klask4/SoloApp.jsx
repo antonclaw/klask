@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { addPlayer, buildStateForSave } from './game-logic.js';
-import { saveState } from './api.js';
+import { saveState } from './api';
 import { LoginScreen } from '../shared/AppShared';
 import GameSetup from './components/GameSetup.jsx';
-import { AppShell, LoadingScreen, ModeSwitchButtons, useLegacyKlaskStyles } from './components/AppShared.jsx';
+import { AppShell, LoadingScreen, ModeSwitchButtons } from './components/AppShared.jsx';
 import SortableTable from '../shared/SortableTable';
-import useKlask4Session from './hooks/useKlask4Session.js';
+import useKlask4Session from './hooks/useKlask4Session';
 import {
   calculateProjectedTotals,
   calculateSoloPlayerStats,
@@ -21,8 +21,6 @@ function resolveSoloScreen(state) {
 }
 
 export default function SoloApp() {
-  useLegacyKlaskStyles();
-
   const {
     screen,
     setScreen,

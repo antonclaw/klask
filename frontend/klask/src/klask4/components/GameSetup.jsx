@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AddPlayerForm from '../../shared/AddPlayerForm';
 
 function getNameSizeClass(name) {
   if (name.length > 16) return ' name-size-xs';
@@ -9,7 +10,6 @@ function getNameSizeClass(name) {
 export default function GameSetup({ players, onStartGame, onCancel, onAddPlayer }) {
   const [selected, setSelected] = useState(() => new Set(players.slice(0, 4).map(p => p.id)));
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newPlayerName, setNewPlayerName] = useState('');
 
   function toggle(id) {
     const next = new Set(selected);
@@ -23,13 +23,12 @@ export default function GameSetup({ players, onStartGame, onCancel, onAddPlayer 
 
   const canStart = selected.size === 4;
 
-  async function handleAddPlayer(e) {
-    e.preventDefault();
-    if (!onAddPlayer || !newPlayerName.trim()) return;
-    await onAddPlayer(newPlayerName.trim());
-    setNewPlayerName('');
+  async function handleAddPlayer(name) {
+    if (!onAddPlayer) return;
+    await onAddPlayer(name);
     setShowAddForm(false);
   }
+
 
   return (
     <div className="game-setup">
@@ -45,16 +44,7 @@ export default function GameSetup({ players, onStartGame, onCancel, onAddPlayer 
       <h2>Select 4 Players</h2>
       <p className="setup-hint">{selected.size}/4 selected</p>
       {showAddForm && (
-        <form className="add-player-form setup-add-player-form" onSubmit={handleAddPlayer}>
-          <input
-            type="text"
-            placeholder="Player name"
-            value={newPlayerName}
-            onChange={(e) => setNewPlayerName(e.target.value)}
-            autoFocus
-          />
-          <button type="submit" disabled={!newPlayerName.trim()}>Add</button>
-        </form>
+        <AddPlayerForm className="add-player-form setup-add-player-form" onAddPlayer={handleAddPlayer} />
       )}
       <div className="toggle-grid">
         {players.map(p => (
