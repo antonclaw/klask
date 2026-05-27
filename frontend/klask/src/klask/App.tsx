@@ -25,6 +25,7 @@ import {
 
 type Screen = 'login' | 'main';
 type AnyRow = Record<string, any>;
+function resolveMainScreen(): Screen { return 'main'; }
 function Notification({ notification }: { notification: { message: string; type: string } | null }) {
   return <div id="notification" className={`notification ${notification?.type || ''} ${notification ? 'show' : ''}`}>{notification?.message}</div>;
 }
@@ -97,7 +98,7 @@ export default function App() {
   const { screen, setScreen, error, setError, saving, setSaving, handleLogin, handleLogout } = useStateSession({
     client: klaskApi,
     deserialize,
-    resolveScreen: () => 'main' as Screen,
+    resolveScreen: resolveMainScreen,
     loginScreen: 'login' as Screen,
   });
 
