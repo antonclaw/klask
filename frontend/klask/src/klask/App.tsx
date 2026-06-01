@@ -25,6 +25,7 @@ import {
 
 type Screen = 'login' | 'main';
 type AnyRow = Record<string, any>;
+function resolveMainScreen(): Screen { return 'main'; }
 function Notification({ notification }: { notification: { message: string; type: string } | null }) {
   return <div id="notification" className={`notification ${notification?.type || ''} ${notification ? 'show' : ''}`}>{notification?.message}</div>;
 }
@@ -44,7 +45,10 @@ function History({ onRemove }: { onRemove: (type: 'game' | 'championship', index
       const p2 = players.find((p: AnyRow) => p.id === event.player2Id);
       const winnerName = event.score1 > event.score2 ? p1?.name : p2?.name;
       const loserName = event.score1 > event.score2 ? p2?.name : p1?.name;
-      return <li className="history-item" key={`${event.type}-${idx}`}><span>{prefix}{winnerName || 'Unknown'} {Math.max(event.score1, event.score2)}:{Math.min(event.score1, event.score2)} {loserName || 'Unknown'}</span><button className="remove-event-btn circular-btn circular-btn-sm hover-scale-rotate" onClick={() => onRemove('game', event.originalIndex)}>×</button></li>;
+      const winnerDelta = event.score1 > event.score2 ? event.rating?.player1Delta : event.rating?.player2Delta;
+      const loserDelta = event.score1 > event.score2 ? event.rating?.player2Delta : event.rating?.player1Delta;
+      const ratingText = typeof winnerDelta === 'number' && typeof loserDelta === 'number' ? ` · rating ${winnerDelta > 0 ? '+' : ''}${winnerDelta}/${loserDelta}` : '';
+      return <li className="history-item" key={`${event.type}-${idx}`}><span>{prefix}{winnerName || 'Unknown'} {Math.max(event.score1, event.score2)}:{Math.min(event.score1, event.score2)} {loserName || 'Unknown'}{ratingText}</span><button className="remove-event-btn circular-btn circular-btn-sm hover-scale-rotate" onClick={() => onRemove('game', event.originalIndex)}>×</button></li>;
     }
     const newChamp = players.find((p: AnyRow) => p.id === event.newChampionId);
     const prevChamp = players.find((p: AnyRow) => p.id === event.previousChampionId);
@@ -94,7 +98,7 @@ export default function App() {
   const { screen, setScreen, error, setError, saving, setSaving, handleLogin, handleLogout } = useStateSession({
     client: klaskApi,
     deserialize,
-    resolveScreen: () => 'main' as Screen,
+    resolveScreen: resolveMainScreen,
     loginScreen: 'login' as Screen,
   });
 
@@ -120,7 +124,7 @@ export default function App() {
   const champ = players.find((p: AnyRow) => p.id === championship.championId);
   const h2hPlayer = players.find((p: AnyRow) => p.id === h2hPlayerId);
   const statsColumns: Column<AnyRow>[] = [
-    { key: 'name', label: 'Player' }, { key: 'winPercent', label: 'Win %', defaultDirection: 'desc', sortValue: (r) => Number(r.winPercent) }, { key: 'totalGames', label: 'Games', defaultDirection: 'desc' }, { key: 'pointPercent', label: 'Points %', defaultDirection: 'desc', sortValue: (r) => Number(r.pointPercent) }, { key: 'totalChampionDays', label: 'Champion Days', defaultDirection: 'desc' }, { key: 'maxChampionStreak', label: 'Max Streak', defaultDirection: 'desc' },
+    { key: 'name', label: 'Player' }, { key: 'rating', label: 'Rating', defaultDirection: 'desc' }, { key: 'winPercent', label: 'Win %', defaultDirection: 'desc', sortValue: (r) => Number(r.winPercent) }, { key: 'totalGames', label: 'Games', defaultDirection: 'desc' }, { key: 'pointPercent', label: 'Points %', defaultDirection: 'desc', sortValue: (r) => Number(r.pointPercent) }, { key: 'totalChampionDays', label: 'Champion Days', defaultDirection: 'desc' }, { key: 'maxChampionStreak', label: 'Max Streak', defaultDirection: 'desc' },
   ];
   const h2hColumns: Column<AnyRow>[] = [{ key: 'name', label: 'Opponent' }, { key: 'gamesAgainst', label: 'Games', defaultDirection: 'desc' }, { key: 'winBalance', label: 'Win Balance', defaultDirection: 'desc', render: (r) => `${r.winBalance > 0 ? '+' : ''}${r.winBalance}` }, { key: 'avgPointDiff', label: 'Avg Point Diff', defaultDirection: 'desc', sortValue: (r) => Number(r.avgPointDiff), render: (r) => `${Number(r.avgPointDiff) > 0 ? '+' : ''}${r.avgPointDiff}` }];
 
@@ -134,7 +138,7 @@ export default function App() {
     <select id="p1" value={p1Id} onChange={(e) => selectPlayer(1, e.target.value)}>{players.map((p: AnyRow) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><div><div className="score-label">Score player 1</div><ScorePicker max={6} value={score1} onSelect={(v) => selectScore(1, v)} /></div>
     <select id="p2" value={p2Id} onChange={(e) => selectPlayer(2, e.target.value)}>{players.map((p: AnyRow) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><div><div className="score-label">Score player 2</div><ScorePicker max={6} value={score2} onSelect={(v) => selectScore(2, v)} /></div><button onClick={addMatch}>Save game</button>
     <hr /><h2>👑 Champion</h2><div className="champion-section"><div id="champion">{champ ? champ.name : 'No champion'}</div><button className="change-champion-btn circular-btn circular-btn-md hover-scale" onClick={() => setShowChampion((v) => !v)}>✎</button></div>{showChampion && <div className="add-player-form"><select value={selectedChampion} onChange={(e) => setSelectedChampion(e.target.value)}><option value="">No champion</option>{players.map((p: AnyRow) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><button onClick={changeChampion}>Set</button></div>}
-    <hr /><h2>📊 Stats</h2><div id="stats">{stats.length ? <SortableTable columns={statsColumns} rows={stats} defaultSort={{ key: 'winPercent', direction: 'desc' }} onRowClick={(row) => setH2hPlayerId(players.find((p: AnyRow) => p.name === row.name)?.id || null)} /> : <p>No statistics yet</p>}</div>
+    <hr /><h2>📊 Stats</h2><div id="stats">{stats.length ? <SortableTable columns={statsColumns} rows={stats} defaultSort={{ key: 'rating', direction: 'desc' }} onRowClick={(row) => setH2hPlayerId(players.find((p: AnyRow) => p.name === row.name)?.id || null)} /> : <p>No statistics yet</p>}</div>
     <hr /><h2>📜 Game History</h2><div id="gameHistory"><History onRemove={removeEvent} /></div>
   </AppShell>;
 }
